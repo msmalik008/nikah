@@ -1,0 +1,139 @@
+<!-- Right Sidebar with Widgets -->
+<div class="sticky-top" style="top: 20px;">
+    <!-- Suggested Matches Widget -->
+    <div class="widget-card">
+        <div class="widget-header">
+            <h6 class="mb-0">
+                <i class="fas fa-heart text-danger"></i> Suggested Matches
+                <a href="" class="float-end small">View All</a>
+            </h6>
+        </div>
+        <div class="widget-body" id="suggestedMatchesWidget">
+            {% for match in suggested_matches %}
+            <div class="suggestion-item mb-3">
+                <div class="d-flex align-items-center">
+                    {% if match.profile.profile_pic %}
+                    <img src="{{ match.profile.profile_pic.url }}" 
+                         class="rounded-circle me-2" width="40" height="40">
+                    {% else %}
+                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center me-2" 
+                         style="width: 40px; height: 40px;">
+                        <i class="fas fa-user text-white"></i>
+                    </div>
+                    {% endif %}
+                    <div class="flex-grow-1">
+                        <strong>{{ match.profile.user.username }}</strong>
+                        <div class="small text-muted">{{ match.compatibility }} match</div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger like-btn" 
+                            data-profile-id="{{ match.profile.id }}">
+                        <i class="fas fa-heart"></i>
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted small">No matches suggested yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- People Nearby Widget -->
+    <div class="widget-card">
+        <div class="widget-header">
+            <h6 class="mb-0">
+                <i class="fas fa-map-marker-alt text-info"></i> People Nearby
+            </h6>
+        </div>
+        <div class="widget-body" id="peopleNearbyWidget">
+            {% for person in people_nearby %}
+            <div class="person-item mb-3">
+                <div class="d-flex align-items-center">
+                    {% if person.profile_pic %}
+                    <img src="{{ person.profile_pic.url }}" 
+                         class="rounded-circle me-2" width="40" height="40">
+                    {% else %}
+                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center me-2" 
+                         style="width: 40px; height: 40px;">
+                        <i class="fas fa-user text-white"></i>
+                    </div>
+                    {% endif %}
+                    <div class="flex-grow-1">
+                        <strong>{{ person.user.username }}</strong>
+                        <div class="small text-muted">{{ person.age }} • {{ person.city }}</div>
+                    </div>
+                    <a href="{% url 'accounts:view_profile' person.user.id %}" 
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted small">No people nearby found.</p>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Similar Interests Widget -->
+    <div class="widget-card">
+        <div class="widget-header">
+            <h6 class="mb-0">
+                <i class="fas fa-users text-success"></i> Similar Interests
+            </h6>
+        </div>
+        <div class="widget-body">
+            {% for person in similar_interests %}
+            <div class="interest-item mb-3">
+                <div class="d-flex align-items-center">
+                    {% if person.profile.profile_pic %}
+                    <img src="{{ person.profile.profile_pic.url }}" 
+                         class="rounded-circle me-2" width="40" height="40">
+                    {% else %}
+                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center me-2" 
+                         style="width: 40px; height: 40px;">
+                        <i class="fas fa-user text-white"></i>
+                    </div>
+                    {% endif %}
+                    <div class="flex-grow-1">
+                        <strong>{{ person.profile.user.username }}</strong>
+                        <div class="small text-muted">{{ person.common_interests }} common interests</div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted small">Add interests to your profile to see matches.</p>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Recent Users Widget -->
+    <div class="widget-card">
+        <div class="widget-header">
+            <h6 class="mb-0">
+                <i class="fas fa-user-clock text-warning"></i> Recently Joined
+            </h6>
+        </div>
+        <div class="widget-body">
+            {% for person in recent_users %}
+            <div class="recent-item mb-3">
+                <div class="d-flex align-items-center">
+                    {% if person.profile_pic %}
+                    <img src="{{ person.profile_pic.url }}" 
+                         class="rounded-circle me-2" width="40" height="40">
+                    {% else %}
+                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center me-2" 
+                         style="width: 40px; height: 40px;">
+                        <i class="fas fa-user text-white"></i>
+                    </div>
+                    {% endif %}
+                    <div class="flex-grow-1">
+                        <strong>{{ person.user.username }}</strong>
+                        <div class="small text-muted">Joined {{ person.created_at|timesince }} ago</div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted small">No recent users.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>

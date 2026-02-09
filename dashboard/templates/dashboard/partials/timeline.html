@@ -1,0 +1,282 @@
+<!-- dashboard/templates/dashboard/timeline.html -->
+{% extends 'dashboard/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Timeline{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Timeline</h1>
+    <div class="btn-group">
+        <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+            Filter Activities
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="?filter=all">All Activities</a></li>
+            <li><a class="dropdown-item" href="?filter=likes">Likes</a></li>
+            <li><a class="dropdown-item" href="?filter=matches">Matches</a></li>
+            <li><a class="dropdown-item" href="?filter=messages">Messages</a></li>
+            <li><a class="dropdown-item" href="?filter=profile_views">Profile Views</a></li>
+        </ul>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        {% if activities %}
+            <div class="card">
+                <div class="card-body">
+                    {% for activity in activities %}
+                    <div class="activity-item border-bottom pb-3 mb-3 {% if forloop.last %}border-bottom-0 mb-0{% endif %}">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                {% if activity.user.userprofile.profile_pic %}
+                                <img src="{{ activity.user.userprofile.profile_pic.url }}" 
+                                     alt="{{ activity.user.username }}" 
+                                     class="rounded-circle" width="50" height="50">
+                                {% else %}
+                                <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" 
+                                     style="width: 50px; height: 50px;">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-0">
+                                            <a href="{% url 'accounts:view_profile' activity.user.id %}" class="text-decoration-none">
+                                                {{ activity.user.get_full_name|default:activity.user.username }}
+                                            </a>
+                                        </h6>
+                                        <p class="mb-1 small text-muted">
+                                            {% if activity.activity_type == 'profile_view' %}
+                                                <i class="fas fa-eye text-info"></i> Viewed your profile
+                                            {% elif activity.activity_type == 'like' %}
+                                                <i class="fas fa-heart text-danger"></i> Liked your profile
+                                            {% elif activity.activity_type == 'mutual_match' %}
+                                                <i class="fas fa-heart text-success"></i> It's a match!
+                                            {% elif activity.activity_type == 'friend_request' %}
+                                                <i class="fas fa-user-plus text-primary"></i> Sent you a friend request
+                                            {% elif activity.activity_type == 'message' %}
+                                                <i class="fas fa-envelope text-warning"></i> Sent you a message
+                                            {% elif activity.activity_type == 'signup' %}
+                                                <i class="fas fa-user-check text-success"></i> Joined the platform
+                                            {% else %}
+                                                <i class="fas fa-bell text-secondary"></i> {{ activity.activity_type|title }}
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                    <small class="text-muted">{{ activity.created_at|timesince }} ago</small>
+                                </div>
+                                
+                                {% if activity.metadata %}
+                                <div class="mt-2 small">
+                                    {% if activity.activity_type == 'message' %}
+                                        <p class="mb-0 text-muted">"{{ activity.metadata.message|truncatechars:100 }}"</p>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                                
+                                {% if activity.activity_type == 'like' %}
+                                <div class="mt-2">
+                                    <a href="{% url 'accounts:view_profile' activity.user.id %}" class="btn btn-sm btn-outline-primary">
+                                        View Profile
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-success like-btn" data-profile-id="{{ activity.user.userprofile.id }}">
+                                        Like Back
+                                    </button>
+                                </div>
+                                {% elif activity.activity_type == 'friend_request' %}
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-success accept-request-btn" data-request-id="{{ activity.metadata.request_id }}">
+                                        Accept Request
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger decline-request-btn" data-request-id="{{ activity.metadata.request_id }}">
+                                        Decline
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    <!-- Pagination -->
+                    {% if is_paginated %}
+                    <nav aria-label="Timeline pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}">
+                                    Previous
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}">{{ num }}</a>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}">
+                                    Next
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-history fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">No Activities Yet</h4>
+                    <p class="text-muted">Your activity timeline will appear here.</p>
+                    <a href="" class="btn btn-primary">Start Discovering People</a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Sidebar Stats -->
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Activity Summary</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-2">
+                        <span>Profile Views (Last 7 days)</span>
+                        <span class="badge bg-info rounded-pill">{{ profile_views_7days }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-2">
+                        <span>Likes Received (Last 7 days)</span>
+                        <span class="badge bg-success rounded-pill">{{ likes_received_7days }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-2">
+                        <span>New Matches (Last 7 days)</span>
+                        <span class="badge bg-danger rounded-pill">{{ new_matches_7days }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-2">
+                        <span>Messages Received (Last 7 days)</span>
+                        <span class="badge bg-warning rounded-pill">{{ messages_received_7days }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Quick Stats</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-user-friends fa-2x text-primary"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="mb-0">Total Friends</h6>
+                        <p class="mb-0 text-muted">{{ total_friends }}</p>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-heart fa-2x text-danger"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="mb-0">Mutual Matches</h6>
+                        <p class="mb-0 text-muted">{{ total_matches }}</p>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-envelope fa-2x text-success"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="mb-0">Unread Messages</h6>
+                        <p class="mb-0 text-muted">{{ unread_messages }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Add accept/decline request functionality
+$('.accept-request-btn').click(function(e) {
+    e.preventDefault();
+    const btn = $(this);
+    const requestId = btn.data('request-id');
+    const url = '/friendship/accept-request/' + requestId + '/';
+    
+    btn.prop('disabled', true);
+    btn.html('<i class="fas fa-spinner fa-spin"></i> Accepting...');
+    
+    $.post(url, {}, function(response) {
+        if (response.success) {
+            btn.closest('.activity-item').fadeOut();
+            showToast('Friend request accepted successfully!', 'success');
+        } else {
+            alert(response.message || 'Failed to accept request');
+            btn.prop('disabled', false);
+            btn.html('Accept Request');
+        }
+    });
+});
+
+$('.decline-request-btn').click(function(e) {
+    e.preventDefault();
+    const btn = $(this);
+    const requestId = btn.data('request-id');
+    const url = '/friendship/decline-request/' + requestId + '/';
+    
+    if (confirm('Are you sure you want to decline this friend request?')) {
+        btn.prop('disabled', true);
+        btn.html('<i class="fas fa-spinner fa-spin"></i> Declining...');
+        
+        $.post(url, {}, function(response) {
+            if (response.success) {
+                btn.closest('.activity-item').fadeOut();
+                showToast('Friend request declined', 'info');
+            } else {
+                alert(response.message || 'Failed to decline request');
+                btn.prop('disabled', false);
+                btn.html('Decline');
+            }
+        });
+    }
+});
+
+function showToast(message, type) {
+    const toast = $(`<div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>`);
+    
+    $('.toast-container').append(toast);
+    const bsToast = new bootstrap.Toast(toast[0]);
+    bsToast.show();
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+</script>
+{% endblock %}

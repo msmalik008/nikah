@@ -1,0 +1,274 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Success Stories - SoulMate{% endblock %}
+
+{% block extra_css %}
+<style>
+    .success-hero {
+        background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.9)),
+                    url('https://images.unsplash.com/photo-1511988617509-a57c8a288659?ixlib=rb-4.0.3&auto=format&fit=crop&w=2071&q=80');
+        background-size: cover;
+        background-position: center;
+        border-radius: 20px;
+        padding: 6rem 2rem;
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+    
+    .story-card {
+        background: var(--card-bg);
+        border-radius: 15px;
+        overflow: hidden;
+        margin-bottom: 2rem;
+        transition: transform 0.3s ease;
+    }
+    
+    .story-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .story-image {
+        height: 200px;
+        overflow: hidden;
+    }
+    
+    .story-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease;
+    }
+    
+    .story-card:hover .story-image img {
+        transform: scale(1.05);
+    }
+    
+    .story-content {
+        padding: 1.5rem;
+    }
+    
+    .couple-names {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .wedding-date {
+        color: var(--secondary-color);
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .stats-card {
+        text-align: center;
+        padding: 2rem;
+        border-radius: 15px;
+        background: var(--card-bg);
+        margin-bottom: 2rem;
+    }
+    
+    .stat-number {
+        font-size: 3rem;
+        font-weight: 700;
+        color: var(--secondary-color);
+        display: block;
+    }
+    
+    .stat-label {
+        font-size: 1rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="success-hero">
+    <div class="container">
+        <h1 class="display-4 mb-3 text-white">Real Stories, Real Matches</h1>
+        <p class="lead text-light mb-4">
+            Join thousands of couples who found their perfect match through SoulMate
+        </p>
+        <a href="{% url 'accounts:home' %}" class="btn btn-primary btn-lg">
+            <i class="fas fa-heart me-2"></i> Start Your Story
+        </a>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Stats -->
+    <div class="row mb-5">
+        <div class="col-md-4">
+            <div class="stats-card">
+                <span class="stat-number">128+</span>
+                <span class="stat-label">Successful Matches</span>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="stats-card">
+                <span class="stat-number">42+</span>
+                <span class="stat-label">Marriages</span>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="stats-card">
+                <span class="stat-number">96%</span>
+                <span class="stat-label">Satisfaction Rate</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Success Stories -->
+    <h2 class="text-center mb-5">Featured Success Stories</h2>
+    
+    <div class="row">
+        {% for story in stories %}
+        <div class="col-lg-4 col-md-6">
+            <div class="story-card">
+                <div class="story-image">
+                    <img src="https://images.unsplash.com/photo-1519741497674-611481863552?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" alt="{{ story.names }}">
+                </div>
+                <div class="story-content">
+                    <h3 class="couple-names">{{ story.names }}</h3>
+                    <div class="wedding-date">
+                        <i class="fas fa-heart me-1"></i> Married in {{ story.married_year }}
+                    </div>
+                    <p class="text-muted">{{ story.story }}</p>
+                    
+                    <div class="mt-3">
+                        <button class="btn btn-sm btn-outline-primary read-more-btn" data-story="{{ forloop.counter }}">
+                            Read Full Story
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- More Stories -->
+    <div class="row mb-5">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h4 class="card-title mb-3">Share Your Success Story</h4>
+                    <p class="text-muted mb-4">
+                        Found your perfect match through SoulMate? We'd love to hear your story!
+                    </p>
+                    <a href="mailto:stories@soulmate.com" class="btn btn-primary">
+                        <i class="fas fa-envelope me-2"></i> Share Your Story
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Testimonials -->
+    <h2 class="text-center mb-5">What Our Users Say</h2>
+    
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center" 
+                             style="width: 60px; height: 60px; margin-right: 1rem;">
+                            <i class="fas fa-user text-white fa-2x"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">Ahmed & Sarah</h5>
+                            <small class="text-muted">Married for 2 years</small>
+                        </div>
+                    </div>
+                    <p class="card-text">
+                        "SoulMate's compatibility system really works! We were matched based on our values and interests, 
+                        and now we're happily married with a baby on the way."
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center" 
+                             style="width: 60px; height: 60px; margin-right: 1rem;">
+                            <i class="fas fa-user text-white fa-2x"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">Mohammed & Fatima</h5>
+                            <small class="text-muted">Engaged</small>
+                        </div>
+                    </div>
+                    <p class="card-text">
+                        "As practicing Muslims, it was important for us to find someone who shared our values. 
+                        SoulMate helped us connect on a deeper level from the very beginning."
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Story Modals -->
+{% for story in stories %}
+<div class="modal fade" id="storyModal{{ forloop.counter }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">{{ story.names }}'s Story</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <img src="https://images.unsplash.com/photo-1519741497674-611481863552?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+                             alt="{{ story.names }}" class="img-fluid rounded mb-3">
+                    </div>
+                    <div class="col-md-8">
+                        <h4>{{ story.names }}</h4>
+                        <p class="text-muted mb-3">
+                            <i class="fas fa-heart text-danger me-1"></i>
+                            Married in {{ story.married_year }}
+                        </p>
+                        <p>{{ story.full_story|default:story.story }}</p>
+                        
+                        <div class="mt-4">
+                            <h6>Their Journey:</h6>
+                            <ul class="text-muted">
+                                <li>Matched on SoulMate in {{ story.matched_year|default:"2022" }}</li>
+                                <li>Engaged after {{ story.engagement_months|default:"6" }} months</li>
+                                <li>Married in {{ story.married_year|default:"2023" }}</li>
+                                <li>Currently living in {{ story.location|default:"Dubai" }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<script>
+    // Story modals
+    document.addEventListener('DOMContentLoaded', function() {
+        const readMoreButtons = document.querySelectorAll('.read-more-btn');
+        readMoreButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const storyId = this.getAttribute('data-story');
+                const modal = new bootstrap.Modal(document.getElementById(`storyModal${storyId}`));
+                modal.show();
+            });
+        });
+    });
+</script>
+{% endblock %}

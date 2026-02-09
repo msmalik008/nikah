@@ -1,0 +1,549 @@
+<!-- dashboard/templates/dashboard/friends.html -->
+{% extends 'dashboard/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Friends{% endblock %}
+
+{% block extra_css %}
+<style>
+.friend-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    transition: all 0.3s;
+}
+
+.friend-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.friend-avatar {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+}
+
+.friend-tabs .nav-link {
+    color: #666;
+    border: none;
+    border-bottom: 3px solid transparent;
+}
+
+.friend-tabs .nav-link.active {
+    color: #007bff;
+    background: none;
+    border-bottom: 3px solid #007bff;
+}
+
+.online-status {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.online-status.online {
+    background-color: #4caf50;
+}
+
+.online-status.offline {
+    background-color: #ccc;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Friends</h1>
+    <div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#findFriendsModal">
+            <i class="fas fa-user-plus"></i> Find Friends
+        </button>
+    </div>
+</div>
+
+<!-- Friend Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h2 class="mb-0">{{ friends_count }}</h2>
+                <p class="mb-0">Total Friends</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h2 class="mb-0">{{ pending_count }}</h2>
+                <p class="mb-0">Pending Requests</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+        <div class="card-body text-center">
+            <h2 class="mb-0">{{ online_friends }}</h2>
+            <p class="mb-0">Online Now</p>
+        </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h2 class="mb-0">{{ mutual_friends }}</h2>
+                <p class="mb-0">Mutual Friends</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs friend-tabs mb-4" id="friendsTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button">
+            <i class="fas fa-users"></i> All Friends
+            <span class="badge bg-primary ms-1">{{ friends_count }}</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requests" type="button">
+            <i class="fas fa-user-clock"></i> Pending Requests
+            {% if pending_count > 0 %}
+            <span class="badge bg-danger ms-1">{{ pending_count }}</span>
+            {% endif %}
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="sent-tab" data-bs-toggle="tab" data-bs-target="#sent" type="button">
+            <i class="fas fa-paper-plane"></i> Sent Requests
+            {% if sent_requests.count > 0 %}
+            <span class="badge bg-warning ms-1">{{ sent_requests.count }}</span>
+            {% endif %}
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="online-tab" data-bs-toggle="tab" data-bs-target="#online" type="button">
+            <i class="fas fa-circle"></i> Online Friends
+        </button>
+    </li>
+</ul>
+
+<!-- Tab Content -->
+<div class="tab-content" id="friendsTabContent">
+    <!-- All Friends Tab -->
+    <div class="tab-pane fade show active" id="all" role="tabpanel">
+        {% if friends %}
+            <div class="row">
+                {% for friend in friends %}
+                <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+                    <div class="card friend-card h-100">
+                        <div class="card-body text-center">
+                            <div class="mb-3">
+                                {% if friend.userprofile.profile_pic %}
+                                <img src="{{ friend.userprofile.profile_pic.url }}" 
+                                     class="rounded-circle friend-avatar"
+                                     alt="{{ friend.username }}">
+                                {% else %}
+                                <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center friend-avatar">
+                                    <i class="fas fa-user text-white fa-2x"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <h5 class="card-title mb-1">{{ friend.get_full_name|default:friend.username }}</h5>
+                            <p class="text-muted small mb-2">
+                                <span class="online-status {% if friend.userprofile.is_online %}online{% else %}offline{% endif %}"></span>
+                                {% if friend.userprofile.is_online %}
+                                    Online
+                                {% else %}
+                                    Last seen {{ friend.userprofile.last_active|timesince }} ago
+                                {% endif %}
+                            </p>
+                            <p class="card-text small text-muted mb-3">
+                                {% if friend.userprofile.city %}{{ friend.userprofile.city }}{% endif %}
+                                {% if friend.userprofile.country %}, {{ friend.userprofile.country }}{% endif %}
+                            </p>
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="{% url 'accounts:view_profile' friend.id %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye"></i> Profile
+                                </a>
+                                <a href="/chat/conversation/{{ friend.id }}/" class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-envelope"></i> Message
+                                </a>
+                                <button class="btn btn-outline-danger btn-sm remove-friend-btn" data-user-id="{{ friend.id }}">
+                                    <i class="fas fa-user-times"></i> Remove
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-users fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">No Friends Yet</h4>
+                    <p class="text-muted">Start connecting with people!</p>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#findFriendsModal">
+                        <i class="fas fa-user-plus"></i> Find Friends
+                    </button>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Pending Requests Tab -->
+    <div class="tab-pane fade" id="requests" role="tabpanel">
+        {% if pending_requests %}
+            <div class="row">
+                {% for request in pending_requests %}
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-3">
+                                {% if request.user_a.userprofile.profile_pic %}
+                                <img src="{{ request.user_a.userprofile.profile_pic.url }}" 
+                                     class="rounded-circle"
+                                     width="60" height="60"
+                                     alt="{{ request.user_a.username }}">
+                                {% else %}
+                                <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center"
+                                     style="width: 60px; height: 60px;">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                                {% endif %}
+                                <div class="ms-3 flex-grow-1">
+                                    <h5 class="mb-1">{{ request.user_a.get_full_name|default:request.user_a.username }}</h5>
+                                    <p class="text-muted small mb-2">
+                                        {% with profile=request.user_a.userprofile %}
+                                            {{ profile.age }} • 
+                                            {% if profile.city %}{{ profile.city }}{% endif %}
+                                            {% if profile.country %}, {{ profile.country }}{% endif %}
+                                        {% endwith %}
+                                    </p>
+                                    <small class="text-muted">
+                                        Sent {{ request.created_at|timesince }} ago
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-success btn-sm flex-grow-1 accept-request-btn" 
+                                        data-request-id="{{ request.id }}">
+                                    <i class="fas fa-check"></i> Accept
+                                </button>
+                                <button class="btn btn-danger btn-sm flex-grow-1 decline-request-btn" 
+                                        data-request-id="{{ request.id }}">
+                                    <i class="fas fa-times"></i> Decline
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-user-clock fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">No Pending Requests</h4>
+                    <p class="text-muted">When someone sends you a friend request, it will appear here.</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Sent Requests Tab -->
+    <div class="tab-pane fade" id="sent" role="tabpanel">
+        {% if sent_requests %}
+            <div class="row">
+                {% for request in sent_requests %}
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-3">
+                                {% if request.user_b.userprofile.profile_pic %}
+                                <img src="{{ request.user_b.userprofile.profile_pic.url }}" 
+                                     class="rounded-circle"
+                                     width="60" height="60"
+                                     alt="{{ request.user_b.username }}">
+                                {% else %}
+                                <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center"
+                                     style="width: 60px; height: 60px;">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                                {% endif %}
+                                <div class="ms-3 flex-grow-1">
+                                    <h5 class="mb-1">{{ request.user_b.get_full_name|default:request.user_b.username }}</h5>
+                                    <p class="text-muted small mb-2">
+                                        {% with profile=request.user_b.userprofile %}
+                                            {{ profile.age }} • 
+                                            {% if profile.city %}{{ profile.city }}{% endif %}
+                                            {% if profile.country %}, {{ profile.country }}{% endif %}
+                                        {% endwith %}
+                                    </p>
+                                    <small class="text-muted">
+                                        Sent {{ request.created_at|timesince }} ago
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-warning btn-sm flex-grow-1 cancel-request-btn" 
+                                        data-request-id="{{ request.id }}">
+                                    <i class="fas fa-times"></i> Cancel Request
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-paper-plane fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">No Sent Requests</h4>
+                    <p class="text-muted">Your sent friend requests will appear here.</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Online Friends Tab -->
+    <div class="tab-pane fade" id="online" role="tabpanel">
+        {% if online_friends_list %}
+            <div class="row">
+                {% for friend in online_friends_list %}
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="position-relative flex-shrink-0">
+                                    {% if friend.userprofile.profile_pic %}
+                                    <img src="{{ friend.userprofile.profile_pic.url }}" 
+                                         class="rounded-circle"
+                                         width="50" height="50"
+                                         alt="{{ friend.username }}">
+                                    {% else %}
+                                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center"
+                                         style="width: 50px; height: 50px;">
+                                        <i class="fas fa-user text-white"></i>
+                                    </div>
+                                    {% endif %}
+                                    <span class="online-status online"></span>
+                                </div>
+                                <div class="ms-3 flex-grow-1">
+                                    <h6 class="mb-1">{{ friend.get_full_name|default:friend.username }}</h6>
+                                    <p class="text-muted small mb-0">
+                                        {% if friend.userprofile.city %}{{ friend.userprofile.city }}{% endif %}
+                                        {% if friend.userprofile.country %}, {{ friend.userprofile.country }}{% endif %}
+                                    </p>
+                                </div>
+                                <div>
+                                    <a href="/chat/conversation/{{ friend.id }}/" class="btn btn-outline-success btn-sm">
+                                        <i class="fas fa-envelope"></i> Message
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-wifi fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">No Friends Online</h4>
+                    <p class="text-muted">None of your friends are currently online.</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Find Friends Modal -->
+<div class="modal fade" id="findFriendsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Find Friends</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <input type="text" class="form-control" placeholder="Search by name, city, or interests...">
+                </div>
+                
+                <div class="row" id="friendSuggestions">
+                    <!-- Friend suggestions will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Accept friend request
+    $('.accept-request-btn').click(function(e) {
+        e.preventDefault();
+        const btn = $(this);
+        const requestId = btn.data('request-id');
+        const url = '/friendship/accept-request/' + requestId + '/';
+        
+        btn.prop('disabled', true);
+        btn.html('<i class="fas fa-spinner fa-spin"></i>');
+        
+        $.post(url, {}, function(response) {
+            if (response.success) {
+                showToast('Friend request accepted!', 'success');
+                btn.closest('.col-md-6').fadeOut();
+            } else {
+                showToast(response.message || 'Failed to accept request', 'danger');
+                btn.prop('disabled', false);
+                btn.html('<i class="fas fa-check"></i> Accept');
+            }
+        });
+    });
+    
+    // Decline friend request
+    $('.decline-request-btn').click(function(e) {
+        e.preventDefault();
+        const btn = $(this);
+        const requestId = btn.data('request-id');
+        const url = '/friendship/decline-request/' + requestId + '/';
+        
+        if (confirm('Are you sure you want to decline this friend request?')) {
+            btn.prop('disabled', true);
+            btn.html('<i class="fas fa-spinner fa-spin"></i>');
+            
+            $.post(url, {}, function(response) {
+                if (response.success) {
+                    showToast('Friend request declined', 'info');
+                    btn.closest('.col-md-6').fadeOut();
+                } else {
+                    showToast(response.message || 'Failed to decline request', 'danger');
+                    btn.prop('disabled', false);
+                    btn.html('<i class="fas fa-times"></i> Decline');
+                }
+            });
+        }
+    });
+    
+    // Cancel sent request
+    $('.cancel-request-btn').click(function(e) {
+        e.preventDefault();
+        const btn = $(this);
+        const requestId = btn.data('request-id');
+        const url = '/friendship/cancel-request/' + requestId + '/';
+        
+        if (confirm('Are you sure you want to cancel this friend request?')) {
+            btn.prop('disabled', true);
+            btn.html('<i class="fas fa-spinner fa-spin"></i>');
+            
+            $.post(url, {}, function(response) {
+                if (response.success) {
+                    showToast('Friend request cancelled', 'info');
+                    btn.closest('.col-md-6').fadeOut();
+                } else {
+                    showToast(response.message || 'Failed to cancel request', 'danger');
+                    btn.prop('disabled', false);
+                    btn.html('<i class="fas fa-times"></i> Cancel Request');
+                }
+            });
+        }
+    });
+    
+    // Remove friend
+    $('.remove-friend-btn').click(function(e) {
+        e.preventDefault();
+        const btn = $(this);
+        const userId = btn.data('user-id');
+        
+        if (confirm('Are you sure you want to remove this friend?')) {
+            const url = '/friendship/remove-friend/' + userId + '/';
+            
+            btn.prop('disabled', true);
+            btn.html('<i class="fas fa-spinner fa-spin"></i>');
+            
+            $.post(url, {}, function(response) {
+                if (response.success) {
+                    showToast('Friend removed', 'info');
+                    btn.closest('.col-xl-3').fadeOut();
+                } else {
+                    showToast(response.message || 'Failed to remove friend', 'danger');
+                    btn.prop('disabled', false);
+                    btn.html('<i class="fas fa-user-times"></i> Remove');
+                }
+            });
+        }
+    });
+    
+    // Load friend suggestions in modal
+    $('#findFriendsModal').on('show.bs.modal', function() {
+        $.get('/dashboard/api/friend-suggestions/', function(response) {
+            if (response.success && response.suggestions.length > 0) {
+                let html = '';
+                response.suggestions.forEach(suggestion => {
+                    html += `
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start mb-3">
+                                    <div class="flex-shrink-0">
+                                        <img src="${suggestion.avatar || '/static/img/default-avatar.png'}" 
+                                             class="rounded-circle" width="50" height="50">
+                                    </div>
+                                    <div class="ms-3 flex-grow-1">
+                                        <h6 class="mb-1">${suggestion.name}</h6>
+                                        <p class="text-muted small mb-2">${suggestion.location}</p>
+                                        <p class="small text-muted mb-0">${suggestion.mutual_friends} mutual friends</p>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary btn-sm w-100 send-friend-request-btn" 
+                                        data-user-id="${suggestion.id}">
+                                    <i class="fas fa-user-plus"></i> Add Friend
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                });
+                $('#friendSuggestions').html(html);
+            } else {
+                $('#friendSuggestions').html(`
+                    <div class="col-12 text-center py-4">
+                        <p class="text-muted">No friend suggestions available at the moment.</p>
+                    </div>
+                `);
+            }
+        });
+    });
+    
+    function showToast(message, type) {
+        const toast = $(`<div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>`);
+        
+        $('.toast-container').append(toast);
+        const bsToast = new bootstrap.Toast(toast[0]);
+        bsToast.show();
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}

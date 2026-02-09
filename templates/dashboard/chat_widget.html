@@ -1,0 +1,47 @@
+<!-- Chat Widget -->
+<div class="chat-widget">
+    <button class="chat-toggle" id="chatToggle">
+        <i class="bi bi-chat-dots"></i>
+    </button>
+    <div class="chat-container" id="chatContainer">
+        <div class="chat-header">
+            <h6 class="mb-0"><i class="bi bi-people me-2"></i> Friends Chat</h6>
+            <button class="chat-close" id="chatClose">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="friends-list" id="friendsList">
+            <!-- Friends loaded via AJAX -->
+        </div>
+    </div>
+</div>
+
+<script>
+    // Chat widget functionality (separate from content loading)
+    $(document).ready(function() {
+        const chatToggle = $('#chatToggle');
+        const chatContainer = $('#chatContainer');
+        const chatClose = $('#chatClose');
+        
+        chatToggle.click(function() {
+            chatContainer.toggleClass('active');
+            if (chatContainer.hasClass('active')) {
+                loadChatFriends();
+            }
+        });
+        
+        chatClose.click(function() {
+            chatContainer.removeClass('active');
+        });
+        
+        function loadChatFriends() {
+            $.ajax({
+                url: '/dashboard/chat_friends/',
+                method: 'GET',
+                success: function(data) {
+                    $('#friendsList').html(data);
+                }
+            });
+        }
+    });
+</script>

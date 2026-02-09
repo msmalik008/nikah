@@ -1,0 +1,289 @@
+{% extends 'accounts/base.html' %}
+{% load account_tags %}
+{% load auth_tags %}
+
+{% block title %}{{ viewed_user.username }}'s Profile - SoulMate{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-actions {
+        position: sticky;
+        top: 20px;
+    }
+    
+    .action-btn {
+        width: 100%;
+        margin-bottom: 10px;
+        text-align: left;
+        padding: 12px 20px;
+    }
+    
+    .info-item {
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .info-item:last-child {
+        border-bottom: none;
+    }
+    
+    .compatibility-circle {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: conic-gradient(var(--primary-color) 0% {{ compatibility_score }}%, 
+                                  rgba(255,255,255,0.1) {{ compatibility_score }}% 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+    }
+    
+    .compatibility-inner {
+        width: 100px;
+        height: 100px;
+        background: var(--card-bg);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-9">
+        <div class="card p-4 mb-4">
+            <div class="row align-items-center">
+                <div class="col-md-3 text-center">
+                    {% if profile.profile_pic %}
+                        <img src="{{ profile.profile_pic.url }}" alt="Profile Picture" class="profile-pic mb-3">
+                    {% else %}
+                        <div class="profile-pic mb-3 d-flex align-items-center justify-content-center" 
+                             style="background: rgba(255,255,255,0.1);">
+                            <i class="fas fa-user fa-4x text-light"></i>
+                        </div>
+                    {% endif %}
+                    
+                    {% if compatibility_score %}
+                    <div class="compatibility-circle mb-3">
+                        <div class="compatibility-inner">
+                            <h3 class="mb-0 {{ compatibility_score|compatibility_color }}">
+                                {{ compatibility_score }}%
+                            </h3>
+                            <small class="text-muted">Match</small>
+                        </div>
+                    </div>
+                    <p class="{{ compatibility_score|compatibility_color }}">
+                        {{ compatibility_score|compatibility_message }}
+                    </p>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-9">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h1 class="mb-1">{{ viewed_user.username }}</h1>
+                            <div class="d-flex align-items-center mb-3">
+                                {% if profile.age and profile.show_age %}
+                                    <span class="badge bg-primary me-2">{{ profile.age }}</span>
+                                {% endif %}
+                                
+                                {% if profile.gender %}
+                                    <span class="badge bg-secondary me-2">{{ profile.get_gender_display }}</span>
+                                {% endif %}
+                                
+                                {% if profile.city and profile.show_location %}
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-map-marker-alt me-1"></i>
+                                        {{ profile.city }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="dropdown">
+                            <button class="btn btn-outline-light dropdown-toggle" type="button" 
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-flag me-2"></i>Report</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-ban me-2"></i>Block</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    {% if profile.bio %}
+                    <div class="card bg-dark mb-4">
+                        <div class="card-body">
+                            <h6 class="card-title">About</h6>
+                            <p class="card-text">{{ profile.bio }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Profile Information -->
+        <div class="card p-4">
+            <h4 class="mb-4">Profile Information</h4>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <strong>Gender:</strong>
+                        <span class="float-end">{{ profile.get_gender_display|default:"Not specified" }}</span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <strong>Age:</strong>
+                        <span class="float-end">
+                            {% if profile.show_age and profile.age %}
+                                {{ profile.age }}
+                            {% else %}
+                                Hidden
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <strong>Location:</strong>
+                        <span class="float-end">
+                            {% if profile.show_location %}
+                                {% if profile.city and profile.country %}
+                                    {{ profile.city }}, {{ profile.country }}
+                                {% elif profile.city %}
+                                    {{ profile.city }}
+                                {% elif profile.country %}
+                                    {{ profile.country }}
+                                {% else %}
+                                    Not specified
+                                {% endif %}
+                            {% else %}
+                                Hidden
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <strong>Religious Sect:</strong>
+                        <span class="float-end">
+                            {% if profile.show_sect and profile.sect %}
+                                {{ profile.sect }}
+                            {% else %}
+                                Hidden
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <strong>Education:</strong>
+                        <span class="float-end">
+                            {% if profile.show_education and profile.education %}
+                                {{ profile.get_education_display }}
+                            {% else %}
+                                Hidden
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <strong>Practice Level:</strong>
+                        <span class="float-end">
+                            {% if profile.show_practice_level and profile.practice_level %}
+                                {{ profile.get_practice_level_display }}
+                            {% else %}
+                                Hidden
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            {% if profile.preferences %}
+            <div class="mt-4">
+                <h5>Preferences</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <strong>Looking for:</strong>
+                            <span class="float-end">{{ profile|get_preference_display:"looking_for" }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <strong>Marital Status:</strong>
+                            <span class="float-end">{{ profile|get_preference_display:"marital_status" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-lg-3">
+        <div class="profile-actions">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Actions</h5>
+                    
+                    <button class="btn btn-primary action-btn">
+                        <i class="fas fa-heart me-2"></i> Like Profile
+                    </button>
+                    
+                    <button class="btn btn-outline-primary action-btn">
+                        <i class="fas fa-comment me-2"></i> Send Message
+                    </button>
+                    
+                    <button class="btn btn-outline-light action-btn">
+                        <i class="fas fa-share me-2"></i> Share Profile
+                    </button>
+                    
+                    <a href="{% url 'dashboard:dashboard' %}?tab=discover" class="btn btn-outline-light action-btn">
+                        <i class="fas fa-search me-2"></i> Find Similar Profiles
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Profile Status</h5>
+                    
+                    <div class="info-item">
+                        <strong>Joined:</strong>
+                        <span class="float-end">{{ viewed_user.date_joined|date:"M Y" }}</span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <strong>Last Active:</strong>
+                        <span class="float-end">{{ profile.last_active|format_last_active }}</span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <strong>Profile Complete:</strong>
+                        <span class="float-end">{{ profile|profile_completion_percentage }}%</span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <strong>Visibility:</strong>
+                        <span class="float-end">
+                            {% if profile.is_visible %}
+                                <span class="badge bg-success">Public</span>
+                            {% else %}
+                                <span class="badge bg-warning">Private</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

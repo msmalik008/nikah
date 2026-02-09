@@ -1,0 +1,356 @@
+<!-- dashboard/templates/dashboard/discover.html -->
+{% extends 'dashboard/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Discover People{% endblock %}
+
+{% block extra_css %}
+<style>
+.match-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.match-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.match-img {
+    height: 200px;
+    object-fit: cover;
+    width: 100%;
+}
+
+.compatibility-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+}
+
+.filter-sidebar {
+    position: sticky;
+    top: 80px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Discover People</h1>
+    <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+        <i class="fas fa-filter"></i> Filters
+    </button>
+</div>
+
+<!-- Filter Collapse -->
+<div class="collapse mb-4" id="filterCollapse">
+    <div class="card">
+        <div class="card-body">
+            <form method="get" id="filter-form">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label for="age_min" class="form-label">Minimum Age</label>
+                        <input type="number" class="form-control" id="age_min" name="age_min" 
+                               value="{{ request.GET.age_min }}" min="18" max="100">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="age_max" class="form-label">Maximum Age</label>
+                        <input type="number" class="form-control" id="age_max" name="age_max" 
+                               value="{{ request.GET.age_max }}" min="18" max="100">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="city" class="form-label">City</label>
+                        <input type="text" class="form-control" id="city" name="city" 
+                               value="{{ request.GET.city }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="sect" class="form-label">Sect</label>
+                        <select class="form-control" id="sect" name="sect">
+                            <option value="">Any</option>
+                            <option value="Sunni" {% if request.GET.sect == 'Sunni' %}selected{% endif %}>Sunni</option>
+                            <option value="Shia" {% if request.GET.sect == 'Shia' %}selected{% endif %}>Shia</option>
+                            <!-- Add other sects -->
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="education" class="form-label">Education</label>
+                        <select class="form-control" id="education" name="education">
+                            <option value="">Any</option>
+                            <option value="HS" {% if request.GET.education == 'HS' %}selected{% endif %}>High School</option>
+                            <option value="BA" {% if request.GET.education == 'BA' %}selected{% endif %}>Bachelor's</option>
+                            <option value="MA" {% if request.GET.education == 'MA' %}selected{% endif %}>Master's</option>
+                            <option value="PHD" {% if request.GET.education == 'PHD' %}selected{% endif %}>PhD</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="practice_level" class="form-label">Religious Practice</label>
+                        <select class="form-control" id="practice_level" name="practice_level">
+                            <option value="">Any</option>
+                            <option value="B" {% if request.GET.practice_level == 'B' %}selected{% endif %}>Beginner</option>
+                            <option value="I" {% if request.GET.practice_level == 'I' %}selected{% endif %}>Intermediate</option>
+                            <option value="A" {% if request.GET.practice_level == 'A' %}selected{% endif %}>Advanced</option>
+                            <option value="E" {% if request.GET.practice_level == 'E' %}selected{% endif %}>Expert</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="d-flex gap-2 w-100">
+                            <button type="submit" class="btn btn-primary flex-grow-1">
+                                <i class="fas fa-search"></i> Apply Filters
+                            </button>
+                            <a href="{% url 'dashboard:discover' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Clear
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Results -->
+<div class="row">
+    {% if matches %}
+        {% for match in matches %}
+        <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+            <div class="card match-card h-100">
+                <div class="position-relative">
+                    {% if match.profile.profile_pic %}
+                    <img src="{{ match.profile.profile_pic.url }}" class="match-img" alt="{{ match.profile.user.username }}">
+                    {% else %}
+                    <div class="match-img bg-secondary d-flex align-items-center justify-content-center">
+                        <i class="fas fa-user text-white fa-5x"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="compatibility-badge">
+                        <i class="fas fa-heart"></i> {{ match.compatibility }}
+                    </div>
+                    
+                    <div class="position-absolute bottom-0 start-0 w-100 p-3" 
+                         style="background: linear-gradient(transparent, rgba(0,0,0,0.7));">
+                        <h5 class="text-white mb-0">{{ match.profile.user.get_full_name|default:match.profile.user.username }}</h5>
+                        <p class="text-white-50 mb-0 small">
+                            {{ match.profile.age }} • 
+                            {% if match.profile.city %}{{ match.profile.city }}{% endif %}
+                            {% if match.profile.country %}, {{ match.profile.country }}{% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <div class="mb-3">
+                        {% if match.profile.education %}
+                        <span class="badge bg-info me-1">
+                            <i class="fas fa-graduation-cap"></i> {{ match.profile.get_education_display }}
+                        </span>
+                        {% endif %}
+                        
+                        {% if match.profile.practice_level %}
+                        <span class="badge bg-success">
+                            <i class="fas fa-pray"></i> {{ match.profile.get_practice_level_display }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if match.profile.bio %}
+                    <p class="card-text small text-muted mb-3">{{ match.profile.bio|truncatechars:100 }}</p>
+                    {% endif %}
+                    
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'accounts:view_profile' match.profile.user.id %}" 
+                           class="btn btn-outline-primary btn-sm flex-grow-1">
+                            <i class="fas fa-eye"></i> View Profile
+                        </a>
+                        <button class="btn btn-outline-danger btn-sm like-btn" 
+                                data-profile-id="{{ match.profile.id }}">
+                            <i class="fas fa-heart"></i> Like
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-users fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">No Matches Found</h4>
+                    <p class="text-muted">Try adjusting your filters to find more people.</p>
+                    <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                        <i class="fas fa-filter"></i> Adjust Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Pagination -->
+{% if matches and paginator.num_pages > 1 %}
+<nav aria-label="Discover pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                Previous
+            </a>
+        </li>
+        {% endif %}
+        
+        {% for num in paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+            </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                Next
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Like button functionality
+    $('.like-btn').click(function(e) {
+        e.preventDefault();
+        const btn = $(this);
+        const profileId = btn.data('profile-id');
+        const url = '/dashboard/like/' + profileId + '/';
+        
+        btn.prop('disabled', true);
+        btn.html('<i class="fas fa-spinner fa-spin"></i>');
+        
+        $.post(url, {}, function(response) {
+            if (response.success) {
+                btn.removeClass('btn-outline-danger').addClass('btn-danger');
+                btn.html('<i class="fas fa-heart"></i> Liked');
+                
+                if (response.is_mutual) {
+                    showToast('It\'s a match! 🎉', 'success');
+                } else {
+                    showToast('Profile liked successfully!', 'success');
+                }
+            } else {
+                showToast(response.message || 'Failed to like profile', 'danger');
+                btn.prop('disabled', false);
+                btn.html('<i class="fas fa-heart"></i> Like');
+            }
+        }).fail(function() {
+            showToast('An error occurred. Please try again.', 'danger');
+            btn.prop('disabled', false);
+            btn.html('<i class="fas fa-heart"></i> Like');
+        });
+    });
+    
+    // Filter form submission with AJAX
+    $('#filter-form').submit(function(e) {
+        e.preventDefault();
+        const form = $(this);
+        const url = window.location.pathname;
+        const data = form.serialize();
+        
+        // Show loading
+        $('.row').html('<div class="col-12 text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>');
+        
+        $.get(url, data, function(response) {
+            const html = $(response).find('.row').html();
+            $('.row').html(html);
+            
+            // Update pagination
+            const pagination = $(response).find('nav').html();
+            if (pagination) {
+                $('nav').html(pagination);
+            } else {
+                $('nav').remove();
+            }
+            
+            // Re-bind like buttons
+            bindLikeButtons();
+        });
+    });
+    
+    function bindLikeButtons() {
+        $('.like-btn').off('click').click(function(e) {
+            // Same like button functionality as above
+            e.preventDefault();
+            const btn = $(this);
+            const profileId = btn.data('profile-id');
+            const url = '/dashboard/like/' + profileId + '/';
+            
+            btn.prop('disabled', true);
+            btn.html('<i class="fas fa-spinner fa-spin"></i>');
+            
+            $.post(url, {}, function(response) {
+                if (response.success) {
+                    btn.removeClass('btn-outline-danger').addClass('btn-danger');
+                    btn.html('<i class="fas fa-heart"></i> Liked');
+                    
+                    if (response.is_mutual) {
+                        showToast('It\'s a match! 🎉', 'success');
+                    } else {
+                        showToast('Profile liked successfully!', 'success');
+                    }
+                } else {
+                    showToast(response.message || 'Failed to like profile', 'danger');
+                    btn.prop('disabled', false);
+                    btn.html('<i class="fas fa-heart"></i> Like');
+                }
+            }).fail(function() {
+                showToast('An error occurred. Please try again.', 'danger');
+                btn.prop('disabled', false);
+                btn.html('<i class="fas fa-heart"></i> Like');
+            });
+        });
+    }
+    
+    function showToast(message, type) {
+        const toast = $(`<div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>`);
+        
+        $('.toast-container').append(toast);
+        const bsToast = new bootstrap.Toast(toast[0]);
+        bsToast.show();
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+    
+    // Initialize
+    bindLikeButtons();
+});
+</script>
+{% endblock %}

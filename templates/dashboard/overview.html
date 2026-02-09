@@ -1,0 +1,133 @@
+<!-- Welcome Section -->
+<div class="card dashboard-card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h4 class="fw-bold mb-2">Welcome back, {{ user.username }}!</h4>
+                <p class="text-muted mb-0">
+                    {% if suggested_matches %}
+                    You have {{ suggested_matches|length }} new matches waiting. Start a conversation today!
+                    {% else %}
+                    Complete your profile to get better match suggestions.
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                {% if suggested_matches %}
+                <a href="?tab=discover" class="btn btn-primary">
+                    <i class="bi bi-heart me-2"></i>View Matches
+                </a>
+                {% else %}
+                <a href="?tab=profile" class="btn btn-primary">
+                    <i class="bi bi-pencil me-2"></i>Complete Profile
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card dashboard-card shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom-0">
+                <h5 class="fw-bold mb-0">Recent Activity</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_likes %}
+                <div class="list-group list-group-flush">
+                    {% for like in recent_likes %}
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex align-items-center">
+                            <div class="position-relative me-3">
+                                {% if like.liker.profile.profile_pic %}
+                                <a href="{% url 'view_profile' like.liker.id %}">
+                                <img src="{{ like.liker.profile.profile_pic.url }}" 
+                                    class="profile-image-sm" 
+                                    alt="{{ like.liker.username }}">
+                                </a>
+                                {% else %}
+                                <div class="profile-image-sm bg-primary text-white d-flex align-items-center justify-content-center">
+                                    {{ like.liker.username|first|upper }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <a href="{% url 'view_profile' like.liker.id %}">
+                                <h6 class="mb-0">{{ like.liker.get_full_name|default:like.liker.username }}</h6>
+                                </a>
+                                <small class="text-muted">Liked your profile</small>
+                            </div>
+                            <div>
+                                <small class="text-muted">{{ like.created_at|timesince }} ago</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-heart display-4 text-muted mb-3"></i>
+                    <p class="text-muted">No recent activity yet</p>
+                    <a href="?tab=discover" class="btn btn-outline-primary">
+                        Start Discovering
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Stats Cards -->
+    <div class="col-lg-4">
+        <!-- Messages Card -->
+        <div class="card dashboard-card shadow-sm mb-4">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="bi bi-chat-dots fs-1 text-primary"></i>
+                </div>
+                <h3 class="dashboard-stat">{{ unread_messages|default:0 }}</h3>
+                <p class="text-muted mb-3">Unread Messages</p>
+                <a href="?tab=messages" class="btn btn-outline-primary w-100">
+                    Go to Messages
+                </a>
+            </div>
+        </div>
+        
+        <!-- Compatibility Card -->
+        <div class="card dashboard-card shadow-sm">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="bi bi-graph-up fs-1 text-primary"></i>
+                </div>
+                <h3 class="dashboard-stat">{{ mutual_matches_count|default:0 }}</h3>
+                <p class="text-muted mb-3">Mutual Matches</p>
+                <a href="?tab=matches" class="btn btn-outline-primary w-100">
+                    View Matches
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Suggested Matches -->
+{% if suggested_matches %}
+<div class="card dashboard-card shadow-sm">
+    <div class="card-header bg-white border-bottom-0 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0">Suggested Matches</h5>
+        <a href="?tab=discover" class="text-primary text-decoration-none">
+            View all <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            {% for match_profile, score in suggested_matches %}
+            <div class="col-md-4">
+                {% include 'dashboard/partials/match_card.html' with profile=match_profile score=score %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}

@@ -1,0 +1,417 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}Messages with {{ receiver.username }} - SoulMate{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-container {
+        height: calc(100vh - 200px);
+        max-width: 1000px;
+        margin: 0 auto;
+        border-radius: 15px;
+        overflow: hidden;
+        background: var(--card-bg);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .chat-header {
+        background: rgba(156, 39, 176, 0.2);
+        padding: 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .chat-messages {
+        height: calc(100% - 140px);
+        overflow-y: auto;
+        padding: 1rem;
+    }
+    
+    .message-bubble {
+        max-width: 70%;
+        margin-bottom: 1rem;
+        padding: 0.75rem 1rem;
+        border-radius: 15px;
+        position: relative;
+        word-wrap: break-word;
+    }
+    
+    .message-mine {
+        background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
+        color: white;
+        margin-left: auto;
+        border-bottom-right-radius: 5px;
+    }
+    
+    .message-theirs {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-light);
+        margin-right: auto;
+        border-bottom-left-radius: 5px;
+    }
+    
+    .message-sender {
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .message-time {
+        font-size: 0.7rem;
+        opacity: 0.7;
+        text-align: right;
+        margin-top: 0.5rem;
+    }
+    
+    .chat-input {
+        padding: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.3);
+    }
+    
+    .typing-indicator {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        padding: 0.5rem 1rem;
+        font-style: italic;
+    }
+    
+    .empty-chat {
+        text-align: center;
+        padding: 3rem;
+        color: var(--text-muted);
+    }
+    
+    .empty-chat i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    .back-button {
+        color: var(--text-light);
+        text-decoration: none;
+        transition: color 0.3s;
+    }
+    
+    .back-button:hover {
+        color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Chat Header -->
+    <div class="d-flex align-items-center mb-4">
+        <a href="{% url 'dashboard:dashboard' %}?tab=messages" class="back-button me-3">
+            <i class="fas fa-arrow-left fa-lg"></i>
+        </a>
+        <div class="d-flex align-items-center">
+            {% if receiver_profile_pic %}
+                <img src="{{ receiver_profile_pic }}" alt="{{ receiver.username }}" 
+                     class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">
+            {% else %}
+                <div class="rounded-circle me-3 d-flex align-items-center justify-content-center" 
+                     style="width: 50px; height: 50px; background: rgba(156, 39, 176, 0.2);">
+                    <i class="fas fa-user text-primary"></i>
+                </div>
+            {% endif %}
+            <div>
+                <h4 class="mb-0">{{ receiver.get_full_name|default:receiver.username }}</h4>
+                <small class="text-muted">
+                    {% if receiver.userprofile %}
+                        {{ receiver.userprofile.age }} • {{ receiver.userprofile.get_gender_display }}
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Chat Container -->
+    <div class="chat-container">
+        <!-- Messages Area -->
+        <div class="chat-messages" id="chatMessages">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="message-bubble {% if message.sender.id == user_id %}message-mine{% else %}message-theirs{% endif %}">
+                        {% if message.sender.id != user_id %}
+                            <div class="message-sender">{{ message.sender.username }}</div>
+                        {% endif %}
+                        <div class="message-content">{{ message.content }}</div>
+                        <div class="message-time">
+                            {{ message.created_at|date:"g:i A" }}
+                            {% if message.is_read and message.sender.id == user_id %}
+                                <i class="fas fa-check-double ms-1" style="font-size: 0.6rem;"></i>
+                            {% elif message.sender.id == user_id %}
+                                <i class="fas fa-check ms-1" style="font-size: 0.6rem;"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-chat">
+                    <i class="fas fa-comments"></i>
+                    <h5>No messages yet</h5>
+                    <p class="mb-0">Start the conversation by sending a message below</p>
+                </div>
+            {% endif %}
+            
+            <!-- Loading indicator for pagination -->
+            <div id="loadingIndicator" class="text-center d-none">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading older messages...</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Typing Indicator -->
+        <div class="typing-indicator d-none" id="typingIndicator">
+            <i class="fas fa-pencil-alt me-2"></i>
+            <span id="typingUser"></span> is typing...
+        </div>
+        
+        <!-- Input Area -->
+        <div class="chat-input">
+            <form id="messageForm" method="POST" action="{% url 'chat:send_message' receiver.id %}">
+                {% csrf_token %}
+                <div class="input-group">
+                    <textarea 
+                        id="messageInput" 
+                        name="content" 
+                        class="form-control" 
+                        rows="1" 
+                        placeholder="Type your message..."
+                        maxlength="1000"
+                        style="resize: none; background: rgba(255,255,255,0.05); border: none; color: white;"
+                        oninput="autoResize(this)"
+                    ></textarea>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <small class="text-muted mt-2 d-block">
+                    Press Enter to send, Shift+Enter for new line
+                </small>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- WebSocket Connection -->
+<script>
+    const conversationId = "{{ conversation.id }}";
+    const userId = "{{ user_id }}";
+    const receiverId = "{{ receiver.id }}";
+    const receiverName = "{{ receiver.username }}";
+    
+    // WebSocket connection
+    let chatSocket = null;
+    
+    function connectWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/chat/${conversationId}/`;
+        
+        chatSocket = new WebSocket(wsUrl);
+        
+        chatSocket.onopen = function(e) {
+            console.log('WebSocket connection established');
+        };
+        
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            
+            if (data.type === 'message') {
+                addMessageToChat(data);
+            } else if (data.type === 'typing') {
+                showTypingIndicator(data.user, data.is_typing);
+            }
+        };
+        
+        chatSocket.onclose = function(e) {
+            console.log('WebSocket connection closed');
+            // Try to reconnect after 5 seconds
+            setTimeout(connectWebSocket, 5000);
+        };
+        
+        chatSocket.onerror = function(e) {
+            console.error('WebSocket error:', e);
+        };
+    }
+    
+    // Add message to chat
+    function addMessageToChat(data) {
+        const chatMessages = document.getElementById('chatMessages');
+        const emptyChat = chatMessages.querySelector('.empty-chat');
+        
+        if (emptyChat) {
+            emptyChat.remove();
+        }
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message-bubble ${data.sender === '{{ request.user.username }}' ? 'message-mine' : 'message-theirs'}`;
+        
+        const time = new Date(data.timestamp);
+        const timeString = time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+        messageDiv.innerHTML = `
+            ${data.sender !== '{{ request.user.username }}' ? `<div class="message-sender">${data.sender}</div>` : ''}
+            <div class="message-content">${data.message}</div>
+            <div class="message-time">
+                ${timeString}
+                ${data.sender === '{{ request.user.username }}' ? '<i class="fas fa-check ms-1" style="font-size: 0.6rem;"></i>' : ''}
+            </div>
+        `;
+        
+        chatMessages.appendChild(messageDiv);
+        scrollToBottom();
+    }
+    
+    // Show typing indicator
+    function showTypingIndicator(username, isTyping) {
+        const indicator = document.getElementById('typingIndicator');
+        const typingUser = document.getElementById('typingUser');
+        
+        if (isTyping) {
+            typingUser.textContent = username;
+            indicator.classList.remove('d-none');
+        } else {
+            indicator.classList.add('d-none');
+        }
+    }
+    
+    // Auto-resize textarea
+    function autoResize(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = (textarea.scrollHeight) + 'px';
+        
+        // Send typing indicator
+        if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.send(JSON.stringify({
+                type: 'typing',
+                is_typing: textarea.value.length > 0
+            }));
+        }
+    }
+    
+    // Scroll to bottom
+    function scrollToBottom() {
+        const chatMessages = document.getElementById('chatMessages');
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    // Handle form submission
+    document.getElementById('messageForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const messageInput = document.getElementById('messageInput');
+        const message = messageInput.value.trim();
+        
+        if (!message) return;
+        
+        // Send via WebSocket if connected
+        if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.send(JSON.stringify({
+                type: 'message',
+                message: message
+            }));
+        }
+        
+        // Also send via HTTP for backup
+        fetch(this.action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: new URLSearchParams({
+                'csrfmiddlewaretoken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'content': message
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                messageInput.value = '';
+                messageInput.style.height = 'auto';
+                
+                // Hide typing indicator
+                if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                    chatSocket.send(JSON.stringify({
+                        type: 'typing',
+                        is_typing: false
+                    }));
+                }
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    });
+    
+    // Handle Enter key
+    document.getElementById('messageInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            document.getElementById('messageForm').dispatchEvent(new Event('submit'));
+        }
+    });
+    
+    // Load older messages on scroll
+    let isLoading = false;
+    let currentPage = 2;
+    
+    document.getElementById('chatMessages').addEventListener('scroll', function() {
+        if (this.scrollTop === 0 && !isLoading && {{ is_paginated }} && {{ page_obj.has_previous }}) {
+            loadOlderMessages();
+        }
+    });
+    
+    function loadOlderMessages() {
+        isLoading = true;
+        document.getElementById('loadingIndicator').classList.remove('d-none');
+        
+        fetch(`?page=${currentPage}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.messages && data.messages.length > 0) {
+                const chatMessages = document.getElementById('chatMessages');
+                const firstMessage = chatMessages.firstChild;
+                
+                data.messages.reverse().forEach(messageData => {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `message-bubble ${messageData.sender.id == userId ? 'message-mine' : 'message-theirs'}`;
+                    
+                    const time = new Date(messageData.created_at);
+                    const timeString = time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    
+                    messageDiv.innerHTML = `
+                        ${messageData.sender.id != userId ? `<div class="message-sender">${messageData.sender.username}</div>` : ''}
+                        <div class="message-content">${messageData.content}</div>
+                        <div class="message-time">
+                            ${timeString}
+                            ${messageData.sender.id == userId ? '<i class="fas fa-check ms-1" style="font-size: 0.6rem;"></i>' : ''}
+                        </div>
+                    `;
+                    
+                    chatMessages.insertBefore(messageDiv, firstMessage);
+                });
+                
+                currentPage++;
+            }
+        })
+        .finally(() => {
+            isLoading = false;
+            document.getElementById('loadingIndicator').classList.add('d-none');
+        });
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        scrollToBottom();
+        connectWebSocket();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,1265 @@
+{% extends 'quizapp/base.html' %}
+{% load static %}
+
+{% block title %}Chat{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-container {
+        height: calc(100vh - 120px);
+        background: var(--bs-light);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .conversation-list {
+        width: 350px;
+        border-right: 1px solid #dee2e6;
+        background: white;
+    }
+    
+    .chat-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .messages-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        background: #f8f9fa;
+    }
+    
+    .message-input {
+        border-top: 1px solid #dee2e6;
+        background: white;
+        padding: 15px;
+    }
+    
+    .message-bubble {
+        max-width: 70%;
+        margin-bottom: 10px;
+        position: relative;
+    }
+    
+    .message-bubble.mine {
+        margin-left: auto;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 18px 18px 4px 18px;
+    }
+    
+    .message-bubble.other {
+        background: white;
+        border-radius: 18px 18px 18px 4px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    
+    .message-time {
+        font-size: 11px;
+        opacity: 0.7;
+        margin-top: 5px;
+    }
+    
+    .typing-indicator {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 12px;
+        background: white;
+        border-radius: 18px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        font-size: 12px;
+        color: #666;
+    }
+    
+    .typing-dots {
+        display: flex;
+        margin-left: 8px;
+    }
+    
+    .typing-dots span {
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: #666;
+        margin: 0 1px;
+        animation: typing 1.4s infinite;
+    }
+    
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    
+    @keyframes typing {
+        0%, 60%, 100% { transform: translateY(0); }
+        30% { transform: translateY(-4px); }
+    }
+    
+    .online-badge {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #28a745;
+        border: 2px solid white;
+        position: absolute;
+        bottom: 0;
+        right: 0;
+    }
+    
+    .unread-badge {
+        background: var(--primary-color);
+        color: white;
+        font-size: 12px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        margin-left: auto;
+    }
+    
+    .emoji-picker {
+        position: absolute;
+        bottom: 100%;
+        right: 0;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        padding: 10px;
+        display: none;
+        z-index: 1000;
+    }
+    
+    .emoji-picker.show {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 5px;
+    }
+    
+    .emoji-option {
+        font-size: 20px;
+        cursor: pointer;
+        padding: 5px;
+        border-radius: 5px;
+        text-align: center;
+    }
+    
+    .emoji-option:hover {
+        background: #f0f0f0;
+    }
+    
+    .message-reactions {
+        display: flex;
+        gap: 2px;
+        margin-top: 5px;
+        flex-wrap: wrap;
+    }
+    
+    .reaction-badge {
+        background: rgba(255,255,255,0.9);
+        border-radius: 10px;
+        padding: 2px 6px;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+    }
+    
+    .message-menu {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: white;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        display: none;
+        z-index: 100;
+    }
+    
+    .message-menu.show {
+        display: block;
+    }
+    
+    .message-menu-item {
+        padding: 8px 16px;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    
+    .message-menu-item:hover {
+        background: #f8f9fa;
+    }
+    
+    @media (max-width: 768px) {
+        .conversation-list {
+            width: 100%;
+            display: none;
+        }
+        
+        .conversation-list.show {
+            display: block;
+        }
+        
+        .chat-area {
+            display: none;
+        }
+        
+        .chat-area.show {
+            display: flex;
+        }
+        
+        .message-bubble {
+            max-width: 85%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="chat-container d-flex">
+        <!-- Conversation List -->
+        <div class="conversation-list d-flex flex-column">
+            <div class="p-3 border-bottom">
+                <h5 class="mb-0">Messages</h5>
+            </div>
+            
+            <div class="p-3 border-bottom">
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Search conversations..." id="searchConversations">
+                    <button class="btn btn-outline-secondary" type="button">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex-fill overflow-auto" id="conversationList">
+                <!-- Conversations will be loaded here -->
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-3 border-top">
+                <button class="btn btn-primary w-100" id="newConversationBtn">
+                    <i class="bi bi-plus-lg me-2"></i>New Chat
+                </button>
+                <button class="btn btn-outline-primary w-100 mt-2" id="newGroupBtn">
+                    <i class="bi bi-people me-2"></i>New Group
+                </button>
+            </div>
+        </div>
+        
+        <!-- Chat Area -->
+        <div class="chat-area">
+            <!-- Chat Header -->
+            <div class="chat-header p-3 border-bottom d-flex align-items-center">
+                <button class="btn btn-outline-secondary me-2 d-md-none" id="backToConversations">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+                <div class="flex-fill">
+                    <h6 class="mb-0" id="chatWithName">Select a conversation</h6>
+                    <small class="text-muted" id="chatStatus"></small>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" id="viewProfileBtn"><i class="bi bi-person me-2"></i>View Profile</a></li>
+                        <li><a class="dropdown-item" href="#" id="clearChatBtn"><i class="bi bi-trash me-2"></i>Clear Chat</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="#" id="blockUserBtn"><i class="bi bi-slash-circle me-2"></i>Block User</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Messages Container -->
+            <div class="messages-container" id="messagesContainer">
+                <div class="text-center py-5">
+                    <i class="bi bi-chat-dots display-1 text-muted"></i>
+                    <p class="mt-3 text-muted">Select a conversation to start chatting</p>
+                </div>
+            </div>
+            
+            <!-- Typing Indicator -->
+            <div class="typing-indicator-container p-2 border-bottom" id="typingIndicator" style="display: none;">
+                <div class="typing-indicator">
+                    <span id="typingUser"></span> is typing
+                    <div class="typing-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Message Input -->
+            <div class="message-input">
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-outline-secondary me-2" id="emojiBtn">
+                        <i class="bi bi-emoji-smile"></i>
+                    </button>
+                    <div class="flex-fill position-relative">
+                        <input type="text" class="form-control" 
+                               id="messageInput" 
+                               placeholder="Type a message..."
+                               disabled>
+                        <div class="emoji-picker" id="emojiPicker">
+                            <!-- Emojis will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    <button class="btn btn-primary ms-2" id="sendMessageBtn" disabled>
+                        <i class="bi bi-send"></i>
+                    </button>
+                </div>
+                
+                <div class="mt-2 d-flex justify-content-between align-items-center">
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary me-1" id="attachFileBtn">
+                            <i class="bi bi-paperclip"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary me-1" id="attachImageBtn">
+                            <i class="bi bi-image"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" id="recordAudioBtn">
+                            <i class="bi bi-mic"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted">Press Enter to send</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Conversation Modal -->
+<div class="modal fade" id="newConversationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">New Conversation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Search Users</label>
+                    <input type="text" class="form-control" id="searchUsers" placeholder="Type to search...">
+                </div>
+                <div id="userList" style="max-height: 300px; overflow-y: auto;">
+                    <!-- Users will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="startConversationBtn" disabled>Start Chat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Group Modal -->
+<div class="modal fade" id="newGroupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Group</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Group Name</label>
+                    <input type="text" class="form-control" id="groupName" placeholder="Enter group name">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Description (Optional)</label>
+                    <textarea class="form-control" id="groupDescription" rows="2" placeholder="Group description"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Add Members</label>
+                    <input type="text" class="form-control mb-2" id="searchGroupMembers" placeholder="Search users...">
+                    <div id="selectedMembers" class="mb-2"></div>
+                    <div id="groupUserList" style="max-height: 200px; overflow-y: auto;">
+                        <!-- Users will be loaded here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="createGroupBtn">Create Group</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Global variables
+    let currentConversationId = null;
+    let currentConversationType = null;
+    let chatSocket = null;
+    let notificationSocket = null;
+    let statusSocket = null;
+    let typingTimeout = null;
+    let selectedUserId = null;
+    let selectedGroupMembers = [];
+    
+    // Emoji list
+    const commonEmojis = ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾'];
+    
+    // Initialize
+    $(document).ready(function() {
+        loadConversations();
+        initializeWebSockets();
+        setupEventListeners();
+        populateEmojiPicker();
+    });
+    
+    function initializeWebSockets() {
+        // Connect to notification WebSocket
+        notificationSocket = new WebSocket(
+            `ws://${window.location.host}/ws/notifications/`
+        );
+        
+        notificationSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.type === 'notification') {
+                showNotification(data.notification);
+            }
+        };
+        
+        // Connect to online status WebSocket
+        statusSocket = new WebSocket(
+            `ws://${window.location.host}/ws/online-status/`
+        );
+        
+        statusSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.type === 'status_update') {
+                updateUserStatus(data.user_id, data.status);
+            }
+        };
+    }
+    
+    function connectToChat(conversationId) {
+        // Close existing connection
+        if (chatSocket) {
+            chatSocket.close();
+        }
+        
+        // Connect to chat WebSocket
+        chatSocket = new WebSocket(
+            `ws://${window.location.host}/ws/chat/${conversationId}/`
+        );
+        
+        chatSocket.onopen = function(e) {
+            console.log('Chat WebSocket connected');
+            $('#messageInput').prop('disabled', false);
+            $('#sendMessageBtn').prop('disabled', false);
+        };
+        
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            handleWebSocketMessage(data);
+        };
+        
+        chatSocket.onclose = function(e) {
+            console.log('Chat WebSocket disconnected');
+            $('#messageInput').prop('disabled', true);
+            $('#sendMessageBtn').prop('disabled', true);
+        };
+        
+        chatSocket.onerror = function(e) {
+            console.error('Chat WebSocket error:', e);
+        };
+    }
+    
+    function handleWebSocketMessage(data) {
+        switch(data.type) {
+            case 'message':
+                addMessageToChat(data.message);
+                break;
+            case 'typing':
+                showTypingIndicator(data.user_id, data.username, data.is_typing);
+                break;
+            case 'read_receipt':
+                updateMessageReadStatus(data.message_id, data.user_id);
+                break;
+            case 'reaction':
+                updateMessageReaction(data.message_id, data.user_id, data.emoji);
+                break;
+            case 'message_deleted':
+                handleMessageDeleted(data.message_id, data.delete_for_everyone);
+                break;
+            case 'user_status':
+                updateUserStatus(data.user_id, data.status);
+                break;
+        }
+    }
+    
+    function loadConversations() {
+        $.ajax({
+            url: '/api/chat/conversations/',
+            method: 'GET',
+            success: function(data) {
+                renderConversationList(data.results);
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading conversations:', error);
+                $('#conversationList').html('<div class="text-center py-5 text-danger">Error loading conversations</div>');
+            }
+        });
+    }
+    
+    function renderConversationList(conversations) {
+        if (conversations.length === 0) {
+            $('#conversationList').html(`
+                <div class="text-center py-5">
+                    <i class="bi bi-chat-dots display-4 text-muted"></i>
+                    <p class="mt-3 text-muted">No conversations yet</p>
+                </div>
+            `);
+            return;
+        }
+        
+        let html = '';
+        conversations.forEach(conversation => {
+            const otherUser = conversation.other_participant;
+            const displayName = conversation.conversation_type === 'direct' 
+                ? (otherUser?.first_name || otherUser?.username || 'Unknown User')
+                : conversation.name;
+            
+            const lastMessage = conversation.last_message?.content || 'No messages yet';
+            const unreadCount = conversation.unread_count || 0;
+            const isOnline = otherUser?.online_status?.is_online || false;
+            
+            html += `
+                <div class="conversation-item p-3 border-bottom" 
+                     data-conversation-id="${conversation.id}"
+                     data-conversation-type="${conversation.conversation_type}"
+                     style="cursor: pointer;">
+                    <div class="d-flex align-items-center">
+                        <div class="position-relative me-3">
+                            <img src="${otherUser?.profile_pic || '/static/images/default-avatar.png'}" 
+                                 class="rounded-circle" 
+                                 width="45" 
+                                 height="45"
+                                 alt="${displayName}">
+                            ${isOnline ? '<span class="online-badge"></span>' : ''}
+                        </div>
+                        <div class="flex-fill">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">${displayName}</h6>
+                                <small class="text-muted">${formatTime(conversation.last_message_time)}</small>
+                            </div>
+                            <p class="mb-0 text-muted text-truncate" style="max-width: 200px;">${lastMessage}</p>
+                        </div>
+                        ${unreadCount > 0 ? `
+                            <span class="unread-badge">${unreadCount}</span>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        $('#conversationList').html(html);
+        
+        // Add click listeners
+        $('.conversation-item').click(function() {
+            const conversationId = $(this).data('conversation-id');
+            const conversationType = $(this).data('conversation-type');
+            openConversation(conversationId, conversationType);
+            
+            // Mobile view: switch to chat area
+            if ($(window).width() < 768) {
+                $('.conversation-list').removeClass('show');
+                $('.chat-area').addClass('show');
+            }
+        });
+    }
+    
+    function openConversation(conversationId, conversationType) {
+        currentConversationId = conversationId;
+        currentConversationType = conversationType;
+        
+        // Update UI
+        $('.conversation-item').removeClass('active');
+        $(`[data-conversation-id="${conversationId}"]`).addClass('active');
+        
+        // Load conversation details
+        loadConversationDetails(conversationId);
+        
+        // Connect to WebSocket
+        connectToChat(conversationId);
+    }
+    
+    function loadConversationDetails(conversationId) {
+        $.ajax({
+            url: `/api/chat/conversations/${conversationId}/`,
+            method: 'GET',
+            success: function(data) {
+                renderConversationHeader(data.conversation);
+                renderMessages(data.messages.results);
+                
+                // Clear unread badge
+                $(`[data-conversation-id="${conversationId}"] .unread-badge`).remove();
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading conversation:', error);
+                $('#messagesContainer').html('<div class="text-center py-5 text-danger">Error loading conversation</div>');
+            }
+        });
+    }
+    
+    function renderConversationHeader(conversation) {
+        if (conversation.conversation_type === 'direct') {
+            const otherUser = conversation.other_participant;
+            $('#chatWithName').text(otherUser?.first_name || otherUser?.username || 'Unknown User');
+            $('#chatStatus').text(otherUser?.online_status?.is_online ? 'Online' : 'Offline');
+            
+            // Update view profile button
+            $('#viewProfileBtn').attr('href', `/profile/${otherUser?.id}/`);
+        } else {
+            $('#chatWithName').text(conversation.name);
+            $('#chatStatus').text(`${conversation.participants.length} members`);
+            
+            // Hide view profile button for groups
+            $('#viewProfileBtn').hide();
+        }
+    }
+    
+    function renderMessages(messages) {
+        if (messages.length === 0) {
+            $('#messagesContainer').html(`
+                <div class="text-center py-5">
+                    <i class="bi bi-chat-dots display-4 text-muted"></i>
+                    <p class="mt-3 text-muted">No messages yet. Start the conversation!</p>
+                </div>
+            `);
+            return;
+        }
+        
+        let html = '';
+        let currentDate = null;
+        
+        // Reverse messages (oldest to newest for display)
+        messages.reverse().forEach(message => {
+            const messageDate = new Date(message.created_at).toDateString();
+            
+            // Add date separator if date changed
+            if (messageDate !== currentDate) {
+                currentDate = messageDate;
+                html += `
+                    <div class="text-center my-3">
+                        <span class="badge bg-secondary">${formatDate(message.created_at)}</span>
+                    </div>
+                `;
+            }
+            
+            const isMine = message.is_mine;
+            const senderName = isMine ? 'You' : message.sender?.first_name || message.sender?.username;
+            
+            html += `
+                <div class="message-bubble ${isMine ? 'mine' : 'other'} p-3 position-relative"
+                     data-message-id="${message.id}">
+                    ${message.reply_to ? `
+                        <div class="reply-preview mb-2 p-2 bg-light rounded" style="border-left: 3px solid var(--primary-color);">
+                            <small class="text-muted">Replying to ${message.reply_to.sender}</small>
+                            <p class="mb-0 small">${message.reply_to.content}</p>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="message-content">
+                        ${message.message_type === 'text' ? message.content : getMediaMessageHTML(message)}
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <div class="message-time">
+                            ${formatTime(message.created_at)}
+                            ${message.is_read && isMine ? ' <i class="bi bi-check2-all text-primary"></i>' : ''}
+                        </div>
+                        <div class="message-actions">
+                            <button class="btn btn-sm btn-link text-muted p-0" onclick="showMessageMenu('${message.id}', event)">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    ${Object.keys(message.reactions || {}).length > 0 ? `
+                        <div class="message-reactions">
+                            ${Object.entries(message.reactions).map(([userId, emoji]) => `
+                                <span class="reaction-badge">${emoji}</span>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        });
+        
+        $('#messagesContainer').html(html);
+        scrollToBottom();
+    }
+    
+    function getMediaMessageHTML(message) {
+        switch(message.message_type) {
+            case 'image':
+                return `<img src="${message.media_file}" class="img-fluid rounded" alt="Image" style="max-height: 300px;">`;
+            case 'video':
+                return `
+                    <video controls class="w-100 rounded" style="max-height: 300px;">
+                        <source src="${message.media_file}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                `;
+            case 'audio':
+                return `
+                    <audio controls class="w-100">
+                        <source src="${message.media_file}" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>
+                `;
+            case 'file':
+                return `
+                    <div class="file-message p-2 bg-light rounded">
+                        <i class="bi bi-file-earmark me-2"></i>
+                        <a href="${message.media_file}" target="_blank">${message.file_name}</a>
+                        <small class="d-block text-muted">${formatFileSize(message.file_size)}</small>
+                    </div>
+                `;
+            default:
+                return message.content;
+        }
+    }
+    
+    function sendMessage() {
+        const content = $('#messageInput').val().trim();
+        if (!content || !currentConversationId) return;
+        
+        const messageData = {
+            type: 'message',
+            content: content,
+            message_type: 'text'
+        };
+        
+        // Send via WebSocket for real-time
+        if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.send(JSON.stringify(messageData));
+        }
+        
+        // Also send via API for persistence
+        $.ajax({
+            url: `/api/chat/conversations/${currentConversationId}/`,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({content: content, message_type: 'text'}),
+            success: function(data) {
+                // Message already added via WebSocket
+            },
+            error: function(xhr, status, error) {
+                console.error('Error sending message:', error);
+                alert('Failed to send message');
+            }
+        });
+        
+        // Clear input
+        $('#messageInput').val('');
+    }
+    
+    function addMessageToChat(message) {
+        // Check if message already exists
+        if ($(`[data-message-id="${message.id}"]`).length > 0) return;
+        
+        const isMine = message.sender.id === {{ user.id }};
+        const html = `
+            <div class="message-bubble ${isMine ? 'mine' : 'other'} p-3"
+                 data-message-id="${message.id}">
+                <div class="message-content">
+                    ${message.message_type === 'text' ? message.content : getMediaMessageHTML(message)}
+                </div>
+                <div class="message-time">
+                    ${formatTime(message.created_at)}
+                    ${message.is_read && isMine ? ' <i class="bi bi-check2-all text-primary"></i>' : ''}
+                </div>
+            </div>
+        `;
+        
+        $('#messagesContainer').append(html);
+        scrollToBottom();
+    }
+    
+    function showTypingIndicator(userId, username, isTyping) {
+        if (userId === {{ user.id }}) return;
+        
+        if (isTyping) {
+            $('#typingUser').text(username);
+            $('#typingIndicator').show();
+        } else {
+            $('#typingIndicator').hide();
+        }
+    }
+    
+    function updateMessageReadStatus(messageId, userId) {
+        if (userId === {{ user.id }}) return;
+        
+        const messageElement = $(`[data-message-id="${messageId}"]`);
+        if (messageElement.length > 0) {
+            messageElement.find('.bi-check2-all').addClass('text-primary');
+        }
+    }
+    
+    function updateMessageReaction(messageId, userId, emoji) {
+        const messageElement = $(`[data-message-id="${messageId}"]`);
+        if (messageElement.length > 0) {
+            let reactionsContainer = messageElement.find('.message-reactions');
+            if (reactionsContainer.length === 0) {
+                reactionsContainer = $('<div class="message-reactions"></div>');
+                messageElement.append(reactionsContainer);
+            }
+            
+            // Add or update reaction
+            reactionsContainer.append(`<span class="reaction-badge">${emoji}</span>`);
+        }
+    }
+    
+    function handleMessageDeleted(messageId, deleteForEveryone) {
+        const messageElement = $(`[data-message-id="${messageId}"]`);
+        if (messageElement.length > 0) {
+            if (deleteForEveryone) {
+                messageElement.find('.message-content').html('<em>This message was deleted</em>');
+            } else {
+                messageElement.remove();
+            }
+        }
+    }
+    
+    function updateUserStatus(userId, status) {
+        // Update in conversation list
+        const conversationItem = $(`[data-conversation-id*="${userId}"]`);
+        if (conversationItem.length > 0) {
+            if (status === 'online') {
+                conversationItem.find('.online-badge').show();
+            } else {
+                conversationItem.find('.online-badge').hide();
+            }
+        }
+        
+        // Update in chat header if current conversation
+        if (currentConversationId && status === 'online') {
+            $('#chatStatus').text('Online');
+        } else if (currentConversationId) {
+            $('#chatStatus').text('Offline');
+        }
+    }
+    
+    function setupEventListeners() {
+        // Send message on Enter
+        $('#messageInput').keypress(function(e) {
+            if (e.which === 13 && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // Typing indicator
+        $('#messageInput').on('input', function() {
+            if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                // Send typing started
+                chatSocket.send(JSON.stringify({
+                    type: 'typing',
+                    is_typing: true
+                }));
+                
+                // Clear previous timeout
+                if (typingTimeout) clearTimeout(typingTimeout);
+                
+                // Send typing stopped after 1 second
+                typingTimeout = setTimeout(() => {
+                    if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                        chatSocket.send(JSON.stringify({
+                            type: 'typing',
+                            is_typing: false
+                        }));
+                    }
+                }, 1000);
+            }
+        });
+        
+        // Send button
+        $('#sendMessageBtn').click(sendMessage);
+        
+        // Emoji picker
+        $('#emojiBtn').click(function() {
+            $('#emojiPicker').toggleClass('show');
+        });
+        
+        // Close emoji picker when clicking outside
+        $(document).click(function(e) {
+            if (!$(e.target).closest('#emojiPicker, #emojiBtn').length) {
+                $('#emojiPicker').removeClass('show');
+            }
+        });
+        
+        // Back button (mobile)
+        $('#backToConversations').click(function() {
+            $('.conversation-list').addClass('show');
+            $('.chat-area').removeClass('show');
+        });
+        
+        // New conversation
+        $('#newConversationBtn').click(function() {
+            loadUsersForNewChat();
+            $('#newConversationModal').modal('show');
+        });
+        
+        // New group
+        $('#newGroupBtn').click(function() {
+            loadUsersForGroup();
+            $('#newGroupModal').modal('show');
+        });
+        
+        // Start conversation
+        $('#startConversationBtn').click(function() {
+            if (selectedUserId) {
+                $.ajax({
+                    url: '/api/chat/conversations/start/',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({user_id: selectedUserId}),
+                    success: function(data) {
+                        $('#newConversationModal').modal('hide');
+                        openConversation(data.id, data.conversation_type);
+                        loadConversations(); // Refresh list
+                    },
+                    error: function(xhr, status, error) {
+                        alert('Failed to start conversation');
+                    }
+                });
+            }
+        });
+        
+        // Create group
+        $('#createGroupBtn').click(function() {
+            const groupName = $('#groupName').val().trim();
+            if (!groupName) {
+                alert('Please enter a group name');
+                return;
+            }
+            
+            if (selectedGroupMembers.length === 0) {
+                alert('Please add at least one member');
+                return;
+            }
+            
+            const groupData = {
+                name: groupName,
+                description: $('#groupDescription').val().trim(),
+                participant_ids: selectedGroupMembers,
+                is_private: true,
+                allow_media: true
+            };
+            
+            $.ajax({
+                url: '/api/chat/groups/create/',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(groupData),
+                success: function(data) {
+                    $('#newGroupModal').modal('hide');
+                    openConversation(data.conversation.id, 'group');
+                    loadConversations(); // Refresh list
+                },
+                error: function(xhr, status, error) {
+                    alert('Failed to create group');
+                }
+            });
+        });
+        
+        // Search conversations
+        $('#searchConversations').on('input', function() {
+            const searchTerm = $(this).val().toLowerCase();
+            $('.conversation-item').each(function() {
+                const text = $(this).text().toLowerCase();
+                $(this).toggle(text.includes(searchTerm));
+            });
+        });
+    }
+    
+    function populateEmojiPicker() {
+        const emojiPicker = $('#emojiPicker');
+        commonEmojis.forEach(emoji => {
+            emojiPicker.append(`
+                <div class="emoji-option" onclick="insertEmoji('${emoji}')">${emoji}</div>
+            `);
+        });
+    }
+    
+    function insertEmoji(emoji) {
+        const input = $('#messageInput');
+        const cursorPos = input[0].selectionStart;
+        const text = input.val();
+        const newText = text.substring(0, cursorPos) + emoji + text.substring(cursorPos);
+        input.val(newText);
+        input.focus();
+        input[0].setSelectionRange(cursorPos + emoji.length, cursorPos + emoji.length);
+    }
+    
+    function showMessageMenu(messageId, event) {
+        event.stopPropagation();
+        
+        // Remove existing menus
+        $('.message-menu').removeClass('show');
+        
+        // Create menu
+        const menu = $(`
+            <div class="message-menu show" style="top: ${event.pageY}px; left: ${event.pageX - 150}px;">
+                <div class="message-menu-item" onclick="reactToMessage('${messageId}', '👍')">👍 Like</div>
+                <div class="message-menu-item" onclick="reactToMessage('${messageId}', '❤️')">❤️ Love</div>
+                <div class="message-menu-item" onclick="reactToMessage('${messageId}', '😂')">😂 Haha</div>
+                <div class="message-menu-item" onclick="reactToMessage('${messageId}', '😮')">😮 Wow</div>
+                <div class="dropdown-divider"></div>
+                <div class="message-menu-item" onclick="replyToMessage('${messageId}')">Reply</div>
+                <div class="message-menu-item" onclick="forwardMessage('${messageId}')">Forward</div>
+                <div class="dropdown-divider"></div>
+                <div class="message-menu-item text-danger" onclick="deleteMessage('${messageId}', false)">Delete for me</div>
+                <div class="message-menu-item text-danger" onclick="deleteMessage('${messageId}', true)">Delete for everyone</div>
+            </div>
+        `);
+        
+        $('body').append(menu);
+        
+        // Close menu when clicking elsewhere
+        $(document).one('click', function() {
+            menu.remove();
+        });
+    }
+    
+    function reactToMessage(messageId, emoji) {
+        if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.send(JSON.stringify({
+                type: 'reaction',
+                message_id: messageId,
+                emoji: emoji
+            }));
+        }
+    }
+    
+    function replyToMessage(messageId) {
+        const messageElement = $(`[data-message-id="${messageId}"]`);
+        const content = messageElement.find('.message-content').text().substring(0, 50);
+        $('#messageInput').val(`Replying to: "${content}..." `).focus();
+    }
+    
+    function forwardMessage(messageId) {
+        // Implement forward functionality
+        alert('Forward functionality coming soon!');
+    }
+    
+    function deleteMessage(messageId, deleteForEveryone) {
+        if (confirm(deleteForEveryone ? 'Delete this message for everyone?' : 'Delete this message for you?')) {
+            if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                chatSocket.send(JSON.stringify({
+                    type: 'delete',
+                    message_id: messageId,
+                    delete_for_everyone: deleteForEveryone
+                }));
+            }
+        }
+    }
+    
+    function loadUsersForNewChat() {
+        $.ajax({
+            url: '/api/profiles/search/?limit=50',
+            method: 'GET',
+            success: function(data) {
+                let html = '';
+                data.results.forEach(user => {
+                    html += `
+                        <div class="user-item p-2 border-bottom" 
+                             data-user-id="${user.user.id}"
+                             style="cursor: pointer;">
+                            <div class="d-flex align-items-center">
+                                <img src="${user.profile_pic || '/static/images/default-avatar.png'}" 
+                                     class="rounded-circle me-3" 
+                                     width="40" 
+                                     height="40">
+                                <div>
+                                    <h6 class="mb-0">${user.user.first_name || user.user.username}</h6>
+                                    <small class="text-muted">${user.age || ''} ${user.city || ''}</small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                $('#userList').html(html);
+                
+                // Add click listeners
+                $('.user-item').click(function() {
+                    selectedUserId = $(this).data('user-id');
+                    $('.user-item').removeClass('selected');
+                    $(this).addClass('selected');
+                    $('#startConversationBtn').prop('disabled', false);
+                });
+                
+                // Search users
+                $('#searchUsers').on('input', function() {
+                    const searchTerm = $(this).val().toLowerCase();
+                    $('.user-item').each(function() {
+                        const text = $(this).text().toLowerCase();
+                        $(this).toggle(text.includes(searchTerm));
+                    });
+                });
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading users:', error);
+                $('#userList').html('<div class="text-center py-3 text-danger">Error loading users</div>');
+            }
+        });
+    }
+    
+    function loadUsersForGroup() {
+        $.ajax({
+            url: '/api/profiles/search/?limit=50',
+            method: 'GET',
+            success: function(data) {
+                let html = '';
+                data.results.forEach(user => {
+                    html += `
+                        <div class="user-item p-2 border-bottom" 
+                             data-user-id="${user.user.id}"
+                             style="cursor: pointer;">
+                            <div class="d-flex align-items-center">
+                                <input type="checkbox" class="form-check-input me-3 group-member-checkbox"
+                                       data-user-id="${user.user.id}"
+                                       data-user-name="${user.user.first_name || user.user.username}">
+                                <img src="${user.profile_pic || '/static/images/default-avatar.png'}" 
+                                     class="rounded-circle me-3" 
+                                     width="40" 
+                                     height="40">
+                                <div>
+                                    <h6 class="mb-0">${user.user.first_name || user.user.username}</h6>
+                                    <small class="text-muted">${user.age || ''} ${user.city || ''}</small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                $('#groupUserList').html(html);
+                
+                // Add checkbox listeners
+                $('.group-member-checkbox').change(function() {
+                    const userId = $(this).data('user-id');
+                    const userName = $(this).data('user-name');
+                    
+                    if ($(this).is(':checked')) {
+                        if (!selectedGroupMembers.includes(userId)) {
+                            selectedGroupMembers.push(userId);
+                            $('#selectedMembers').append(`
+                                <span class="badge bg-primary me-1 mb-1">
+                                    ${userName}
+                                    <button type="button" class="btn-close btn-close-white ms-1" 
+                                            onclick="removeGroupMember(${userId})"></button>
+                                </span>
+                            `);
+                        }
+                    } else {
+                        removeGroupMember(userId);
+                    }
+                });
+                
+                // Search users
+                $('#searchGroupMembers').on('input', function() {
+                    const searchTerm = $(this).val().toLowerCase();
+                    $('.user-item').each(function() {
+                        const text = $(this).text().toLowerCase();
+                        $(this).toggle(text.includes(searchTerm));
+                    });
+                });
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading users:', error);
+                $('#groupUserList').html('<div class="text-center py-3 text-danger">Error loading users</div>');
+            }
+        });
+    }
+    
+    function removeGroupMember(userId) {
+        selectedGroupMembers = selectedGroupMembers.filter(id => id !== userId);
+        $(`.group-member-checkbox[data-user-id="${userId}"]`).prop('checked', false);
+        $(`.badge:contains('${$(`.group-member-checkbox[data-user-id="${userId}"]`).data('user-name')}')`).remove();
+    }
+    
+    function showNotification(notification) {
+        // Check if browser supports notifications
+        if (!("Notification" in window)) {
+            return;
+        }
+        
+        // Check if permission is granted
+        if (Notification.permission === "granted") {
+            new Notification(notification.title, {
+                body: notification.body,
+                icon: notification.icon || '/static/images/logo.png'
+            });
+        }
+        
+        // Also show in-page notification
+        const toast = $(`
+            <div class="toast show position-fixed" style="bottom: 20px; right: 20px; z-index: 1050;">
+                <div class="toast-header">
+                    <strong class="me-auto">${notification.title}</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">
+                    ${notification.body}
+                </div>
+            </div>
+        `);
+        
+        $('body').append(toast);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => toast.remove(), 5000);
+    }
+    
+    // Utility functions
+    function formatTime(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+    
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        
+        if (date.toDateString() === today.toDateString()) {
+            return 'Today';
+        } else if (date.toDateString() === yesterday.toDateString()) {
+            return 'Yesterday';
+        } else {
+            return date.toLocaleDateString();
+        }
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    function scrollToBottom() {
+        const container = $('#messagesContainer');
+        container.scrollTop(container[0].scrollHeight);
+    }
+    
+    // Request notification permission on page load
+    if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+    }
+</script>
+{% endblock %}

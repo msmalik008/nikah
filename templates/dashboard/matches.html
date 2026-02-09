@@ -1,0 +1,201 @@
+<div class="row">
+    <!-- Mutual Matches -->
+    <div class="col-lg-6">
+        <div class="card dashboard-card shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom-0">
+                <h5 class="fw-bold mb-0">
+                    <i class="bi bi-heart-fill text-danger me-2"></i>Mutual Matches
+                    {% if mutual_likes and mutual_likes|length > 0 %}
+                    <span class="badge bg-danger">{{ mutual_likes|length }}</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if mutual_likes and mutual_likes|length > 0 %}
+                <div class="list-group list-group-flush">
+                    {% for like in mutual_likes %}
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex align-items-center">
+                            <div class="position-relative me-3">
+                                {% if like.liked and like.liked.profile and like.liked.profile.profile_pic %}
+                                <img src="{{ like.liked.profile.profile_pic.url }}" 
+                                     class="profile-image-sm" 
+                                     alt="{{ like.liked.username }}">
+                                {% else %}
+                                <div class="profile-image-sm bg-primary text-white d-flex align-items-center justify-content-center">
+                                    {% if like.liked %}{{ like.liked.username|first|upper }}{% else %}?{% endif %}
+                                </div>
+                                {% endif %}
+                                {% if like.liked and like.liked.is_online %}
+                                <span class="online-status"></span>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-0">
+                                    {% if like.liked %}
+                                        {{ like.liked.get_full_name|default:like.liked.username }}
+                                    {% else %}
+                                        Unknown User
+                                    {% endif %}
+                                </h6>
+                                <small class="text-muted">Mutual match</small>
+                            </div>
+                            <div class="d-flex gap-2">
+                                {% if like.liked %}
+                                <a href="{% url 'chat' %}?with={{ like.liked.id }}" 
+                                   class="btn btn-primary btn-sm">
+                                    <i class="bi bi-chat-dots"></i>
+                                </a>
+                                {% endif %}
+                                <button class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-three-dots"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-heart display-4 text-muted mb-3"></i>
+                    <p class="text-muted">No mutual matches yet</p>
+                    <a href="?tab=discover" class="btn btn-outline-primary">
+                        Discover More Profiles
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Likes Received -->
+    <div class="col-lg-6">
+        <div class="card dashboard-card shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom-0">
+                <h5 class="fw-bold mb-0">
+                    <i class="bi bi-star-fill text-warning me-2"></i>Likes Received
+                    {% if likes_received and likes_received|length > 0 %}
+                    <span class="badge bg-warning">{{ likes_received|length }}</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if likes_received and likes_received|length > 0 %}
+                <div class="list-group list-group-flush">
+                    {% for like in likes_received %}
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex align-items-center">
+                            <div class="position-relative me-3">
+                                {% if like.liker and like.liker.profile and like.liker.profile.profile_pic %}
+                                <a href="{% url 'view_profile' like.liker.id %}">
+                                <img src="{{ like.liker.profile.profile_pic.url }}" 
+                                     class="profile-image-sm" 
+                                     alt="{{ like.liker.username }}">
+                                </a>
+                                {% else %}
+                                <div class="profile-image-sm bg-primary text-white d-flex align-items-center justify-content-center">
+                                    {% if like.liker %}{{ like.liker.username|first|upper }}{% else %}?{% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                {% if like.liker %}
+                                <a href="{% url 'view_profile' like.liker.id %}">
+                                    <h6 class="mb-0">{{ like.liker.get_full_name|default:like.liker.username }}</h6>
+                                </a>
+                                {% else %}
+                                <h6 class="mb-0">Unknown User</h6>
+                                {% endif %}
+                                <small class="text-muted">Liked your profile</small>
+                            </div>
+                            <div class="d-flex gap-2">
+                                {% if like.liker and like.liker.profile %}
+                                <a href="{% url 'like_profile' like.liker.profile.id %}" 
+                                   class="btn btn-primary btn-sm">
+                                    <i class="bi bi-heart-fill"></i> Like Back
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-star display-4 text-muted mb-3"></i>
+                    <p class="text-muted">No likes received yet</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Likes Given -->
+<div class="card dashboard-card shadow-sm">
+    <div class="card-header bg-white border-bottom-0">
+        <h5 class="fw-bold mb-0">
+            <i class="bi bi-heart text-primary me-2"></i>Likes You've Given
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if likes_given and likes_given|length > 0 %}
+        <div class="row g-3">
+            {% for like in likes_given %}
+            <div class="col-md-4">
+                <div class="match-card">
+                    <div class="position-relative">
+                        {% if like.liked and like.liked.profile and like.liked.profile.profile_pic %}
+                        <img src="{{ like.liked.profile.profile_pic.url }}" 
+                             class="card-img-top" 
+                             alt="{{ like.liked.username }}"
+                             style="height: 150px; object-fit: cover;">
+                        {% else %}
+                        <div class="card-img-top bg-primary d-flex align-items-center justify-content-center" 
+                             style="height: 150px;">
+                            <span class="text-white fs-3">
+                                {% if like.liked %}{{ like.liked.username|first|upper }}{% else %}?{% endif %}
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <h6 class="card-title fw-bold mb-1">
+                            {% if like.liked %}
+                                {{ like.liked.get_full_name|default:like.liked.username }}
+                            {% else %}
+                                Unknown User
+                            {% endif %}
+                        </h6>
+                        <p class="text-muted small mb-2">
+                            <i class="bi bi-person me-1"></i>
+                            {% if like.liked and like.liked.profile and like.liked.profile.age %}
+                                {{ like.liked.profile.age }} yrs
+                            {% else %}
+                                Age not set
+                            {% endif %}
+                        </p>
+                        <div class="d-flex gap-2">
+                            {% if like.liked %}
+                            <a href="{% url 'view_profile' like.liked.id %}" 
+                               class="btn btn-outline-primary btn-sm flex-fill">
+                                <i class="bi bi-eye me-1"></i>View Profile
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-heart display-4 text-muted mb-3"></i>
+            <p class="text-muted">You haven't liked anyone yet</p>
+            <a href="?tab=discover" class="btn btn-outline-primary">
+                Start Discovering
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>

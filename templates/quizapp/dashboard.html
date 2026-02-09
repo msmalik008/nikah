@@ -1,0 +1,1435 @@
+{% extends 'quizapp/base.html' %}
+
+{% block title %}Dashboard - Modern Match{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-card {
+        border: none;
+        border-radius: 15px;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .dashboard-card .card-body {
+        padding: 1.5rem;
+    }
+    
+    .dashboard-stat {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+    
+    .progress-ring {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .progress-ring-circle {
+        transform: rotate(-90deg);
+        transform-origin: 50% 50%;
+    }
+    
+    .match-card {
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .match-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    
+    .compatibility-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: var(--primary);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .nav-tabs-dashboard {
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .nav-tabs-dashboard .nav-link {
+        border: none;
+        color: var(--body-color);
+        font-weight: 500;
+        padding: 12px 20px;
+        position: relative;
+    }
+    
+    .nav-tabs-dashboard .nav-link:hover {
+        color: var(--primary);
+    }
+    
+    .nav-tabs-dashboard .nav-link.active {
+        color: var(--primary);
+        background: none;
+        border-bottom: 3px solid var(--primary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-3 mb-4">
+            <div class="card dashboard-card shadow-sm">
+                <div class="card-body">
+                    <!-- Profile Info -->
+                    <div class="text-center mb-4">
+                        {% if user_profile.profile_pic %}
+                        <img src="{{ user_profile.profile_pic.url }}" 
+                             class="profile-image mb-3" 
+                             alt="{{ user.username }}">
+                        {% else %}
+                        <div class="profile-image bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-3">
+                            {{ user.username|first|upper }}
+                        </div>
+                        {% endif %}
+                        
+                        <h5 class="fw-bold mb-1">{{ user.get_full_name|default:user.username }}</h5>
+                        <p class="text-muted mb-3">
+                            <i class="bi bi-geo-alt me-1"></i>{{ user_profile.city|default:"Not set" }}, {{ user_profile.country }}
+                        </p>
+                        
+                        <!-- Profile Completion -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted">Profile Completion</small>
+                                <small class="fw-bold">{{ profile_completion }}%</small>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar progress-bar-custom" 
+                                     style="width: {{ profile_completion }}%"></div>
+                            </div>
+                            {% if profile_completion < 100 %}
+                            <small class="text-primary mt-1 d-block">
+                                <a href="{% url 'profile_edit' %}" class="text-decoration-none">
+                                    <i class="bi bi-pencil me-1"></i>Complete your profile
+                                </a>
+                            </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Stats -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3">Quick Stats</h6>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="text-center p-2 border rounded">
+                                    <div class="dashboard-stat">{{ mutual_matches|default:0 }}</div>
+                                    <small class="text-muted">Matches</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center p-2 border rounded">
+                                    <div class="dashboard-stat">{{ likes_received|default:0 }}</div>
+                                    <small class="text-muted">Likes</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center p-2 border rounded">
+                                    <div class="dashboard-stat">{{ unread_messages|default:0 }}</div>
+                                    <small class="text-muted">Messages</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center p-2 border rounded">
+                                    <div class="dashboard-stat">{{ profile_views|default:0 }}</div>
+                                    <small class="text-muted">Views</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Actions -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3">Quick Actions</h6>
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'dashboard:dashboard' %}?tab=discover" class="btn btn-outline-primary d-flex align-items-center justify-content-start">
+                                <i class="bi bi-compass me-2"></i> Discover Matches
+                            </a>
+                            <a href="{% url 'chat' %}" class="btn btn-outline-primary d-flex align-items-center justify-content-start">
+                                <i class="bi bi-chat-dots me-2"></i> Go to Messages
+                            </a>
+                            <a href="{% url 'profile_edit' %}" class="btn btn-outline-primary d-flex align-items-center justify-content-start">
+                                <i class="bi bi-pencil me-2"></i> Edit Profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <!-- Dashboard Tabs -->
+            <!-- Update the tab navigation to use GET parameters -->
+            <ul class="nav nav-tabs nav-tabs-dashboard mb-4" id="dashboardTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link {% if active_tab == 'overview' or not active_tab %}active{% endif %}" 
+                    href="?tab=overview"
+                    data-bs-toggle="tab" 
+                    data-bs-target="#overview" 
+                    role="tab">
+                        <i class="bi bi-speedometer2 me-2"></i>Overview
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link {% if active_tab == 'discover' %}active{% endif %}" 
+                    href="?tab=discover"
+                    data-bs-toggle="tab" 
+                    data-bs-target="#discover" 
+                    role="tab">
+                        <i class="bi bi-compass me-2"></i>Discover
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link {% if active_tab == 'matches' %}active{% endif %}" 
+                    href="?tab=matches"
+                    data-bs-toggle="tab" 
+                    data-bs-target="#matches" 
+                    role="tab">
+                        <i class="bi bi-heart me-2"></i>Matches
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link {% if active_tab == 'friends' %}active{% endif %}" 
+                    href="?tab=friends"
+                    data-bs-toggle="tab" 
+                    data-bs-target="#friends" 
+                    role="tab">
+                        <i class="bi bi-people me-2"></i>Friends
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link {% if active_tab == 'messages' %}active{% endif %}" 
+                    href="?tab=messages"
+                    data-bs-toggle="tab" 
+                    data-bs-target="#messages" 
+                    role="tab">
+                        <i class="bi bi-chat-dots me-2"></i>Messages
+                        {% if unread_messages %}
+                        <span class="badge bg-danger">{{ unread_messages }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link {% if active_tab == 'profile' %}active{% endif %}" 
+                    href="?tab=profile"
+                    data-bs-toggle="tab" 
+                    data-bs-target="#profile" 
+                    role="tab">
+                        <i class="bi bi-person me-2"></i>My Profile
+                    </a>
+                </li>
+            </ul>
+            
+            <!-- Tab Content -->
+            <div class="tab-content" id="dashboardTabContent">
+                <!-- Overview Tab -->
+                <div class="tab-pane fade {% if active_tab == 'overview' or not active_tab %}show active{% endif %}" 
+                     id="overview" 
+                     role="tabpanel">
+                    
+                    <!-- Welcome Section -->
+                    <div class="card dashboard-card shadow-sm mb-4">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h4 class="fw-bold mb-2">Welcome back, {{ user.username }}!</h4>
+                                    <p class="text-muted mb-0">
+                                        {% if suggested_matches %}
+                                        You have {{ suggested_matches|length }} new matches waiting. Start a conversation today!
+                                        {% else %}
+                                        Complete your profile to get better match suggestions.
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-md-4 text-md-end">
+                                    {% if suggested_matches %}
+                                    <a href="{% url 'dashboard:dashboard'%}?tab=discover" class="btn btn-primary">
+                                        <i class="bi bi-heart me-2"></i>View Matches
+                                    </a>
+                                    {% else %}
+                                    <a href="{% url 'profile_edit' %}" class="btn btn-primary">
+                                        <i class="bi bi-pencil me-2"></i>Complete Profile
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recent Activity -->
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <div class="card dashboard-card shadow-sm mb-4">
+                                <div class="card-header bg-white border-bottom-0">
+                                    <h5 class="fw-bold mb-0">Recent Activity</h5>
+                                </div>
+                                <div class="card-body">
+                                    {% if recent_likes and recent_likes|length > 0 %}
+                                    <div class="list-group list-group-flush">
+                                        {% for like in recent_likes %}
+                                        <div class="list-group-item border-0 px-0">
+                                            <div class="d-flex align-items-center">
+                                                <div class="position-relative me-3">
+                                                    {% if like.liker.profile.profile_pic %}
+                                                    <a href="{% url 'view_profile' like.liker.id %}">
+                                                    <img src="{{ like.liker.profile.profile_pic.url }}" 
+                                                        class="profile-image-sm" 
+                                                        alt="{{ like.liker.username }}">
+                                                    </a>
+                                                    {% else %}
+                                                    <div class="profile-image-sm bg-primary text-white d-flex align-items-center justify-content-center">
+                                                        {{ like.liker.username|first|upper }}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <a href="{% url 'view_profile' like.liker.id %}">
+                                                    <h6 class="mb-0">{{ like.liker.get_full_name|default:like.liker.username }}</h6>
+                                                    </a>
+                                                    <small class="text-muted">Liked your profile</small>
+                                                </div>
+                                                <div>
+                                                    <small class="text-muted">{{ like.created_at|timesince }} ago</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="text-center py-4">
+                                        <i class="bi bi-heart display-4 text-muted mb-3"></i>
+                                        <p class="text-muted">No recent activity yet</p>
+                                        <a href="{% url 'dashboard:dashboard'%}?tab=discover" class="btn btn-outline-primary">
+                                            Start Discovering
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Quick Stats Cards -->
+                        <div class="col-lg-4">
+                            <!-- Messages Card -->
+                            <div class="card dashboard-card shadow-sm mb-4">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="bi bi-chat-dots fs-1 text-primary"></i>
+                                    </div>
+                                    <h3 class="dashboard-stat">{{ unread_messages|default:0 }}</h3>
+                                    <p class="text-muted mb-3">Unread Messages</p>
+                                    <a href="{% url 'chat' %}" class="btn btn-outline-primary w-100">
+                                        Go to Messages
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <!-- Compatibility Card -->
+                            <div class="card dashboard-card shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="bi bi-graph-up fs-1 text-primary"></i>
+                                    </div>
+                                    <h3 class="dashboard-stat">92%</h3>
+                                    <p class="text-muted mb-3">Avg. Compatibility</p>
+                                    <a href="{% url 'dashboard:dashboard'%}?tab=matches" class="btn btn-outline-primary w-100">
+                                        View Matches
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Suggested Matches -->
+                    {% if suggested_matches %}
+                    <div class="card dashboard-card shadow-sm">
+                        <div class="card-header bg-white border-bottom-0 d-flex justify-content-between align-items-center">
+                            <h5 class="fw-bold mb-0">Suggested Matches</h5>
+                            <a href="{% url 'dashboard:dashboard'%}?tab=discover" class="text-primary text-decoration-none">
+                                View all <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                {% for match_profile, score in suggested_matches|slice:":3" %}
+                                <div class="col-md-4">
+                                    <div class="match-card">
+                                        <div class="position-relative">
+                                            {% if match_profile.profile_pic %}
+                                            <img src="{{ match_profile.profile_pic.url }}" 
+                                                 class="card-img-top" 
+                                                 alt="{{ match_profile.user.username }}"
+                                                 style="height: 200px; object-fit: cover;">
+                                            {% else %}
+                                            <div class="card-img-top bg-primary d-flex align-items-center justify-content-center" 
+                                                 style="height: 200px;">
+                                                <span class="text-white fs-1">{{ match_profile.user.username|first|upper }}</span>
+                                            </div>
+                                            {% endif %}
+                                            <span class="compatibility-badge">{{ score }}%</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <h6 class="card-title fw-bold mb-1">{{ match_profile.user.get_full_name|default:match_profile.user.username }}</h6>
+                                            <p class="text-muted small mb-2">
+                                                <i class="bi bi-geo-alt me-1"></i>{{ match_profile.city|default:"Not specified" }}
+                                            </p>
+                                            <p class="card-text small text-truncate" style="max-height: 40px;">
+                                                {{ match_profile.bio|truncatewords:10 }}
+                                            </p>
+                                            <div class="d-flex gap-2">
+                                                <a href="{% url 'like_profile' match_profile.id %}" 
+                                                   class="btn btn-primary btn-sm flex-fill">
+                                                    <i class="bi bi-heart me-1"></i>Like
+                                                </a>
+                                                <a href="{% url 'view_profile' match_profile.user.id %}" 
+                                                   class="btn btn-outline-primary btn-sm">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Add this tab pane to your dashboard tabs -->
+                <div class="tab-pane fade {% if active_tab == 'friends' %}show active{% endif %}" 
+                    id="friends" 
+                    role="tabpanel">
+                    
+                    <div class="row">
+                        <!-- Friend Requests -->
+                        <div class="col-lg-6">
+                            <div class="card dashboard-card shadow-sm mb-4">
+                                <div class="card-header bg-white border-bottom-0">
+                                    <h5 class="fw-bold mb-0">
+                                        <i class="bi bi-person-plus text-primary me-2"></i>Friend Requests
+                                        {% if received_requests %}
+                                        <span class="badge bg-primary">{{ received_requests.count }}</span>
+                                        {% endif %}
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    {% if received_requests %}
+                                    <div class="list-group list-group-flush">
+                                        {% for request in received_requests %}
+                                        <div class="list-group-item border-0 px-0">
+                                            <div class="d-flex align-items-center">
+                                                <div class="position-relative me-3">
+                                                    {% if request.from_user.profile.profile_pic %}
+                                                    <img src="{{ request.from_user.profile.profile_pic.url }}" 
+                                                        class="profile-image-sm rounded-circle">
+                                                    {% else %}
+                                                    <div class="profile-image-sm bg-primary text-white d-flex align-items-center justify-content-center rounded-circle">
+                                                        {{ request.from_user.username|first|upper }}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-0">{{ request.from_user.get_full_name|default:request.from_user.username }}</h6>
+                                                    <small class="text-muted">Sent {{ request.created_at|timesince }} ago</small>
+                                                </div>
+                                                <div class="d-flex gap-2">
+                                                    <form method="post" action="{% url 'accept_friend_request' request.id %}" class="d-inline">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-success btn-sm">
+                                                            <i class="bi bi-check"></i>
+                                                        </button>
+                                                    </form>
+                                                    <form method="post" action="{% url 'reject_friend_request' request.id %}" class="d-inline">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-danger btn-sm">
+                                                            <i class="bi bi-x"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="text-center py-4">
+                                        <i class="bi bi-inbox display-4 text-muted mb-3"></i>
+                                        <p class="text-muted">No friend requests</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Friends List -->
+                        <div class="col-lg-6">
+                            <div class="card dashboard-card shadow-sm mb-4">
+                                <div class="card-header bg-white border-bottom-0 d-flex justify-content-between align-items-center">
+                                    <h5 class="fw-bold mb-0">
+                                        <i class="bi bi-people text-primary me-2"></i>My Friends
+                                    </h5>
+                                    <span class="badge bg-primary">{{ friends|length }}</span>
+                                </div>
+                                <div class="card-body">
+                                    {% if friends %}
+                                    <div class="list-group list-group-flush">
+                                        {% for friend in friends %}
+                                        <div class="list-group-item border-0 px-0">
+                                            <div class="d-flex align-items-center">
+                                                <div class="position-relative me-3">
+                                                    {% if friend.profile.profile_pic %}
+                                                    <img src="{{ friend.profile.profile_pic.url }}" 
+                                                        class="profile-image-sm rounded-circle">
+                                                    {% else %}
+                                                    <div class="profile-image-sm bg-primary text-white d-flex align-items-center justify-content-center rounded-circle">
+                                                        {{ friend.username|first|upper }}
+                                                    </div>
+                                                    {% endif %}
+                                                    {% if friend.chat_notifications.is_online %}
+                                                    <span class="online-status"></span>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-0">{{ friend.get_full_name|default:friend.username }}</h6>
+                                                    <small class="text-muted">
+                                                        {% if friend.chat_notifications.is_online %}
+                                                        Online
+                                                        {% else %}
+                                                        Last seen {{ friend.chat_notifications.last_active|timesince }} ago
+                                                        {% endif %}
+                                                    </small>
+                                                </div>
+                                                <div class="d-flex gap-2">
+                                                    <a href="{% url 'chat' %}?with={{ friend.id }}" 
+                                                    class="btn btn-primary btn-sm">
+                                                        <i class="bi bi-chat-dots"></i>
+                                                    </a>
+                                                    <form method="post" 
+                                                        action="{% url 'remove_friend' friend.id %}" 
+                                                        onsubmit="return confirm('Remove {{ friend.username }} from friends?');"
+                                                        class="d-inline">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                            <i class="bi bi-person-dash"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="text-center py-4">
+                                        <i class="bi bi-people display-4 text-muted mb-3"></i>
+                                        <p class="text-muted">No friends yet</p>
+                                        <a href="{% url 'dashboard:dashboard'%}?tab=discover" class="btn btn-outline-primary">
+                                            Discover People
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Discover Tab -->
+                <div class="tab-pane fade {% if active_tab == 'discover' %}show active{% endif %}" 
+                     id="discover" 
+                     role="tabpanel">
+                    
+
+                    <!-- In the discover tab section, update the profile cards: -->
+                    <a href="{% url 'view_profile' profile.user.id %}" 
+                    class="btn btn-outline-primary btn-sm"
+                    data-bs-toggle="modal" 
+                    data-bs-target="#profileModal{{ profile.id }}">
+                        <i class="bi bi-eye"></i>
+                    </a>
+
+                    <!-- Filters -->
+                    <div class="card dashboard-card shadow-sm mb-4">
+                        <div class="card-body">
+                            <h5 class="fw-bold mb-3">Find Your Match</h5>
+                            <form method="get" id="filterForm">
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label">Age Range</label>
+                                        <div class="d-flex align-items-center">
+                                            <input type="number" 
+                                                   name="age_min" 
+                                                   class="form-control" 
+                                                   placeholder="Min" 
+                                                   min="18" 
+                                                   max="100"
+                                                   value="{{ request.GET.age_min }}">
+                                            <span class="mx-2">-</span>
+                                            <input type="number" 
+                                                   name="age_max" 
+                                                   class="form-control" 
+                                                   placeholder="Max" 
+                                                   min="18" 
+                                                   max="100"
+                                                   value="{{ request.GET.age_max }}">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-3">
+                                        <label class="form-label">City</label>
+                                        <input type="text" 
+                                               name="city" 
+                                               class="form-control" 
+                                               placeholder="Any city"
+                                               value="{{ request.GET.city }}">
+                                    </div>
+                                    
+                                    <div class="col-md-2">
+                                        <label class="form-label">Sect</label>
+                                        <select name="sect" class="form-select">
+                                            <option value="">Any sect</option>
+                                            <option value="Sunni" {% if request.GET.sect == 'Sunni' %}selected{% endif %}>Sunni</option>
+                                            <option value="Shia" {% if request.GET.sect == 'Shia' %}selected{% endif %}>Shia</option>
+                                            <option value="Other" {% if request.GET.sect == 'Other' %}selected{% endif %}>Other</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-2">
+                                        <label class="form-label">Education</label>
+                                        <select name="education" class="form-select">
+                                            <option value="">Any education</option>
+                                            <option value="High School" {% if request.GET.education == 'High School' %}selected{% endif %}>High School</option>
+                                            <option value="Bachelor" {% if request.GET.education == 'Bachelor' %}selected{% endif %}>Bachelor's</option>
+                                            <option value="Master" {% if request.GET.education == 'Master' %}selected{% endif %}>Master's</option>
+                                            <option value="PhD" {% if request.GET.education == 'PhD' %}selected{% endif %}>PhD</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        <button type="submit" class="btn btn-primary w-100">
+                                            <i class="bi bi-filter me-1"></i>Filter
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Matches Grid -->
+                    <div class="row g-4" id="matchesGrid">
+                        {% if matches %}
+                            {% for profile, score in matches %}
+                            <div class="col-md-6 col-lg-4 col-xl-3">
+                                <div class="match-card">
+                                    <div class="position-relative">
+                                        {% if profile.profile_pic %}
+                                        <img src="{{ profile.profile_pic.url }}" 
+                                             class="card-img-top" 
+                                             alt="{{ profile.user.username }}"
+                                             style="height: 200px; object-fit: cover;">
+                                        {% else %}
+                                        <div class="card-img-top bg-primary d-flex align-items-center justify-content-center" 
+                                             style="height: 200px;">
+                                            <span class="text-white fs-1">{{ profile.user.username|first|upper }}</span>
+                                        </div>
+                                        {% endif %}
+                                        <span class="compatibility-badge">{{ score }}%</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <h6 class="card-title fw-bold mb-1">{{ profile.user.get_full_name|default:profile.user.username }}</h6>
+                                        <p class="text-muted small mb-2">
+                                            <i class="bi bi-person me-1"></i>{{ profile.age }} yrs
+                                            <i class="bi bi-geo-alt ms-2 me-1"></i>{{ profile.city|default:"Not specified" }}
+                                        </p>
+                                        <p class="card-text small text-truncate" style="max-height: 40px;">
+                                            {{ profile.bio|truncatewords:10|default:"No bio available" }}
+                                        </p>
+                                        <div class="d-flex gap-2">
+                                            <!-- Like button with multiple options -->
+                                            <div class="btn-group flex-fill" role="group">
+                                                <form method="post" action="{% url 'like_profile' profile.id %}" class="d-inline w-100">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-primary btn-sm w-100 like-btn" 
+                                                            data-profile-id="{{ profile.id }}">
+                                                        <i class="bi bi-heart me-1"></i>Like
+                                                    </button>
+                                                </form>
+                                                <button type="button" class="btn btn-primary btn-sm dropdown-toggle dropdown-toggle-split" 
+                                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <span class="visually-hidden">Toggle Dropdown</span>
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    <li>
+                                                        <a class="dropdown-item ajax-like-btn" href="#" 
+                                                        data-profile-id="{{ profile.id }}">
+                                                            <i class="bi bi-heart me-2"></i>Like (AJAX)
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item" href="#" 
+                                                        onclick="showProfileModal({{ profile.id }})">
+                                                            <i class="bi bi-eye me-2"></i>View Details
+                                                        </a>
+                                                    </li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <a class="dropdown-item" href="{% url 'view_profile' profile.user.id %}">
+                                                            <i class="bi bi-person me-2"></i>Full Profile
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Profile Modal -->
+                                <div class="modal fade" id="profileModal{{ profile.id }}" tabindex="-1">
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">{{ profile.user.get_full_name|default:profile.user.username }}</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="row">
+                                                    <div class="col-md-4 text-center">
+                                                        {% if profile.profile_pic %}
+                                                        <img src="{{ profile.profile_pic.url }}" 
+                                                             class="img-fluid rounded-circle mb-3" 
+                                                             alt="{{ profile.user.username }}"
+                                                             style="width: 150px; height: 150px; object-fit: cover;">
+                                                        {% else %}
+                                                        <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center mx-auto mb-3" 
+                                                             style="width: 150px; height: 150px;">
+                                                            <span class="text-white fs-1">{{ profile.user.username|first|upper }}</span>
+                                                        </div>
+                                                        {% endif %}
+                                                        <div class="badge bg-primary fs-6 mb-3">{{ score }}% Compatible</div>
+                                                        <div class="d-grid gap-2">
+                                                            <a href="{% url 'like_profile' profile.id %}" 
+                                                               class="btn btn-primary">
+                                                                <i class="bi bi-heart me-2"></i>Send Like
+                                                            </a>
+                                                            {% if user_profile and profile.user != request.user %}
+                                                            <button class="btn btn-outline-primary" onclick="startChat({{ profile.user.id }})">
+                                                                <i class="bi bi-chat-dots me-2"></i>Send Message
+                                                            </button>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-8">
+                                                        <table class="table table-sm">
+                                                            <tr>
+                                                                <th width="40%">Age</th>
+                                                                <td>{{ profile.age }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Location</th>
+                                                                <td>{{ profile.city }}, {{ profile.country }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Sect</th>
+                                                                <td>{{ profile.sect|default:"Not specified" }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Education</th>
+                                                                <td>{{ profile.education|default:"Not specified" }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Occupation</th>
+                                                                <td>{{ profile.occupation|default:"Not specified" }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Practice Level</th>
+                                                                <td>{{ profile.practice_level|default:"Not specified" }}</td>
+                                                            </tr>
+                                                        </table>
+                                                        <h6 class="mt-3">Bio</h6>
+                                                        <p>{{ profile.bio|default:"No bio available" }}</p>
+                                                        <h6 class="mt-3">Looking For</h6>
+                                                        <p>{{ profile.seeking|default:"Not specified" }}</p>
+                                                        {% if profile.preferences %}
+                                                        <h6 class="mt-3">Interests</h6>
+                                                        <div class="d-flex flex-wrap gap-2">
+                                                            {% for pref in profile.preferences %}
+                                                            <span class="badge bg-light text-dark border">{{ pref }}</span>
+                                                            {% endfor %}
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                        <div class="col-12">
+                            <div class="text-center py-5">
+                                <i class="bi bi-people display-1 text-muted mb-3"></i>
+                                <h5 class="text-muted mb-3">No matches found</h5>
+                                <p class="text-muted">Try adjusting your filters or check back later.</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if matches.has_other_pages %}
+                    <nav class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if matches.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ matches.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for i in matches.paginator.page_range %}
+                                {% if matches.number == i %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ i }}</span>
+                                </li>
+                                {% elif i > matches.number|add:'-3' and i < matches.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if matches.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ matches.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+                
+                <!-- Matches Tab -->
+                <div class="tab-pane fade {% if active_tab == 'matches' %}show active{% endif %}" 
+                     id="matches" 
+                     role="tabpanel">
+                    
+                    <div class="row">
+                        <!-- Mutual Matches -->
+                        <div class="col-lg-6">
+                            <div class="card dashboard-card shadow-sm mb-4">
+                                <div class="card-header bg-white border-bottom-0">
+                                    <h5 class="fw-bold mb-0">
+                                        <i class="bi bi-heart-fill text-danger me-2"></i>Mutual Matches
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    {% if mutual_likes %}
+                                    <div class="list-group list-group-flush">
+                                        {% for like in mutual_likes %}
+                                        <div class="list-group-item border-0 px-0">
+                                            <div class="d-flex align-items-center">
+                                                <div class="position-relative me-3">
+                                                    {% if like.liked.profile.profile_pic %}
+                                                    <img src="{{ like.liked.profile.profile_pic.url }}" 
+                                                         class="profile-image-sm" 
+                                                         alt="{{ like.liked.username }}">
+                                                    {% else %}
+                                                    <div class="profile-image-sm bg-primary text-white d-flex align-items-center justify-content-center">
+                                                        {{ like.liked.username|first|upper }}
+                                                    </div>
+                                                    {% endif %}
+                                                    <span class="online-status"></span>
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-0">{{ like.liked.get_full_name|default:like.liked.username }}</h6>
+                                                    <small class="text-muted">Mutual match</small>
+                                                </div>
+                                                <div class="d-flex gap-2">
+                                                    <a href="{% url 'chat' %}?with={{ like.liked.id }}" 
+                                                       class="btn btn-primary btn-sm">
+                                                        <i class="bi bi-chat-dots"></i>
+                                                    </a>
+                                                    <button class="btn btn-outline-primary btn-sm">
+                                                        <i class="bi bi-three-dots"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="text-center py-4">
+                                        <i class="bi bi-heart display-4 text-muted mb-3"></i>
+                                        <p class="text-muted">No mutual matches yet</p>
+                                        <a href="{% url 'dashboard:dashboard'%}?tab=discover" class="btn btn-outline-primary">
+                                            Discover More Profiles
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Likes Received -->
+                        <div class="col-lg-6">
+                            <div class="card dashboard-card shadow-sm mb-4">
+                                <div class="card-header bg-white border-bottom-0">
+                                    <h5 class="fw-bold mb-0">
+                                        <i class="bi bi-star-fill text-warning me-2"></i>Likes Received
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    {% if recent_likes %}
+                                    <div class="list-group list-group-flush">
+                                        {% for like in recent_likes %}
+                                        <div class="list-group-item border-0 px-0">
+                                            <div class="d-flex align-items-center">
+                                                <div class="position-relative me-3">
+                                                    {% if like.liker.profile.profile_pic %}
+                                                    <a href="{% url 'view_profile' like.liker.profile.id %}">
+                                                    <img src="{{ like.liker.profile.profile_pic.url }}" 
+                                                         class="profile-image-sm" 
+                                                         alt="{{ like.liker.username }}">
+                                                    </a>
+                                                    {% else %}
+                                                    <div class="profile-image-sm bg-primary text-white d-flex align-items-center justify-content-center">
+                                                        {{ like.liker.username|first|upper }}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <a href="{% url 'view_profile' like.liker.id %}">
+                                                        <h6 class="mb-0">{{ like.liker.get_full_name|default:like.liker.username }}</h6>
+                                                    </a>
+                                                    <small class="text-muted">Liked your profile</small>
+                                                </div>
+                                                <div class="d-flex gap-2">
+                                                    <a href="{% url 'like_profile' like.liker.profile.id %}" 
+                                                       class="btn btn-primary btn-sm">
+                                                        <i class="bi bi-heart-fill"></i> Like Back
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="text-center py-4">
+                                        <i class="bi bi-star display-4 text-muted mb-3"></i>
+                                        <p class="text-muted">No likes received yet</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Profile Tab -->
+                <div class="tab-pane fade {% if active_tab == 'profile' %}show active{% endif %}" 
+                     id="profile" 
+                     role="tabpanel">
+                    
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <div class="card dashboard-card shadow-sm">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-4">
+                                        <h5 class="fw-bold mb-0">My Profile</h5>
+                                        <a href="{% url 'profile_edit' %}" class="btn btn-primary">
+                                            <i class="bi bi-pencil me-2"></i>Edit Profile
+                                        </a>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-4 text-center mb-4">
+                                            {% if user_profile.profile_pic %}
+                                            <img src="{{ user_profile.profile_pic.url }}" 
+                                                 class="profile-image mb-3" 
+                                                 alt="{{ user.username }}">
+                                            {% else %}
+                                            <div class="profile-image bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-3">
+                                                {{ user.username|first|upper }}
+                                            </div>
+                                            <a href="{% url 'profile_edit' %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-camera me-1"></i>Add Photo
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="col-md-8">
+                                            <table class="table">
+                                                <tr>
+                                                    <th width="40%">Username</th>
+                                                    <td>{{ user.username }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Email</th>
+                                                    <td>{{ user.email }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Full Name</th>
+                                                    <td>{{ user.get_full_name|default:"Not set" }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Age</th>
+                                                    <td>{{ user_profile.age|default:"Not set" }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Gender</th>
+                                                    <td>{{ user_profile.get_gender_display|default:"Not set" }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Location</th>
+                                                    <td>{{ user_profile.city|default:"Not set" }}, {{ user_profile.country }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Sect</th>
+                                                    <td>{{ user_profile.sect|default:"Not set" }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Education</th>
+                                                    <td>{{ user_profile.education|default:"Not set" }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Occupation</th>
+                                                    <td>{{ user_profile.occupation|default:"Not set" }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Practice Level</th>
+                                                    <td>{{ user_profile.practice_level|default:"Not set" }}</td>
+                                                </tr>
+                                            </table>
+                                            
+                                            <h6 class="mt-4">Bio</h6>
+                                            <p class="p-3 bg-light rounded">{{ user_profile.bio|default:"No bio added yet" }}</p>
+                                            
+                                            <h6 class="mt-4">Looking For</h6>
+                                            <p class="p-3 bg-light rounded">{{ user_profile.seeking|default:"Not specified" }}</p>
+                                            
+                                            {% if user_profile.preferences %}
+                                            <h6 class="mt-4">My Interests</h6>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                {% for pref in user_profile.preferences %}
+                                                <span class="badge bg-primary">{{ pref }}</span>
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-4">
+                            <!-- Profile Completion -->
+                            <div class="card dashboard-card shadow-sm mb-4">
+                                <div class="card-body">
+                                    <h6 class="fw-bold mb-3">Profile Strength</h6>
+                                    <div class="text-center mb-4">
+                                        <div class="position-relative d-inline-block">
+                                            <svg class="progress-ring" viewBox="0 0 100 100">
+                                                <circle class="progress-ring-circle" 
+                                                        stroke="var(--primary)" 
+                                                        stroke-width="8" 
+                                                        fill="transparent" 
+                                                        r="40" 
+                                                        cx="50" 
+                                                        cy="50"
+                                                        stroke-dasharray="251.2"
+                                                        stroke-dashoffset="{% widthratio profile_completion 100 251.2 %}">
+                                                </circle>
+                                            </svg>
+                                            <div class="position-absolute top-50 start-50 translate-middle">
+                                                <span class="dashboard-stat">{{ profile_completion }}%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="list-group list-group-flush">
+                                        <div class="list-group-item border-0 px-0">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span>Basic Info</span>
+                                                {% if user_profile.age and user_profile.gender %}
+                                                <i class="bi bi-check-circle-fill text-success"></i>
+                                                {% else %}
+                                                <i class="bi bi-x-circle-fill text-danger"></i>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="list-group-item border-0 px-0">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span>Profile Photo</span>
+                                                {% if user_profile.profile_pic %}
+                                                <i class="bi bi-check-circle-fill text-success"></i>
+                                                {% else %}
+                                                <i class="bi bi-x-circle-fill text-danger"></i>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="list-group-item border-0 px-0">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span>Bio</span>
+                                                {% if user_profile.bio %}
+                                                <i class="bi bi-check-circle-fill text-success"></i>
+                                                {% else %}
+                                                <i class="bi bi-x-circle-fill text-danger"></i>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="list-group-item border-0 px-0">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span>Location</span>
+                                                {% if user_profile.city and user_profile.country %}
+                                                <i class="bi bi-check-circle-fill text-success"></i>
+                                                {% else %}
+                                                <i class="bi bi-x-circle-fill text-danger"></i>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="list-group-item border-0 px-0">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span>Preferences</span>
+                                                {% if user_profile.preferences %}
+                                                <i class="bi bi-check-circle-fill text-success"></i>
+                                                {% else %}
+                                                <i class="bi bi-x-circle-fill text-danger"></i>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if profile_completion < 100 %}
+                                    <div class="d-grid mt-3">
+                                        <a href="{% url 'profile_edit' %}" class="btn btn-primary">
+                                            Complete Your Profile
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Account Settings -->
+                            <div class="card dashboard-card shadow-sm">
+                                <div class="card-body">
+                                    <h6 class="fw-bold mb-3">Account Settings</h6>
+                                    <div class="list-group list-group-flush">
+                                        <a href="{% url 'profile_edit' %}" class="list-group-item list-group-item-action border-0 px-0">
+                                            <i class="bi bi-person me-2"></i>Edit Profile
+                                        </a>
+                                        <a href="#" class="list-group-item list-group-item-action border-0 px-0">
+                                            <i class="bi bi-shield me-2"></i>Privacy Settings
+                                        </a>
+                                        <a href="#" class="list-group-item list-group-item-action border-0 px-0">
+                                            <i class="bi bi-bell me-2"></i>Notification Settings
+                                        </a>
+                                        <a href="{% url 'password_reset' %}" class="list-group-item list-group-item-action border-0 px-0">
+                                            <i class="bi bi-key me-2"></i>Change Password
+                                        </a>
+                                        <a href="{% url 'logout' %}" class="list-group-item list-group-item-action border-0 px-0 text-danger">
+                                            <i class="bi bi-box-arrow-right me-2"></i>Logout
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Activate tab from URL parameter
+    $(document).ready(function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tab = urlParams.get('tab');
+        if (tab) {
+            $(`.nav-link[data-bs-target="#${tab}"]`).tab('show');
+        }
+        
+        // Like functionality
+        $('.like-btn').click(function(e) {
+            e.preventDefault();
+            const btn = $(this);
+            const url = btn.attr('href');
+            
+            $.ajax({
+                url: url,
+                method: 'POST',
+                headers: {'X-CSRFToken': '{{ csrf_token }}'},
+                success: function(data) {
+                    if (data.success) {
+                        btn.html('<i class="bi bi-heart-fill me-1"></i>Liked');
+                        btn.removeClass('btn-primary').addClass('btn-success');
+                        btn.prop('disabled', true);
+                        
+                        // Show success message
+                        const alert = $(`
+                            <div class="alert alert-success alert-dismissible fade show position-fixed" 
+                                 style="top: 20px; right: 20px; z-index: 1050;">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                Like sent successfully!
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        `);
+                        $('body').append(alert);
+                        setTimeout(() => alert.alert('close'), 3000);
+                    }
+                },
+                error: function() {
+                    alert('Error sending like');
+                }
+            });
+        });
+        
+        // Filter form submission
+        $('#filterForm').submit(function(e) {
+            e.preventDefault();
+            const formData = $(this).serialize();
+            window.location.href = '?tab=discover&' + formData;
+        });
+    });
+    
+    function startChat(userId) {
+        $.ajax({
+            url: '/api/chat/conversations/start/',
+            method: 'POST',
+            headers: {'X-CSRFToken': '{{ csrf_token }}'},
+            contentType: 'application/json',
+            data: JSON.stringify({user_id: userId}),
+            success: function(data) {
+                window.location.href = '{% url "chat" %}?conversation=' + data.id;
+            },
+            error: function() {
+                alert('Error starting conversation');
+            }
+        });
+    }
+
+    // In your dashboard.html, add this JavaScript
+    $(document).ready(function() {
+        // Handle tab clicks to update URL without page reload
+        $('.nav-tabs-dashboard .nav-link').click(function(e) {
+            e.preventDefault();
+            const tab = $(this).attr('href').replace('?tab=', '');
+            window.history.pushState({}, '', `?tab=${tab}`);
+            
+            // Update active tab
+            $('.nav-tabs-dashboard .nav-link').removeClass('active');
+            $(this).addClass('active');
+            
+            // Show corresponding tab content
+            $('.tab-pane').removeClass('show active');
+            $(`#${tab}`).addClass('show active');
+            
+            // Load tab content via AJAX if needed
+            if (tab === 'discover' || tab === 'matches' || tab === 'friends') {
+                loadTabContent(tab);
+            }
+        });
+        
+        // Handle browser back/forward buttons
+        window.addEventListener('popstate', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tab = urlParams.get('tab') || 'overview';
+            
+            // Update active tab
+            $('.nav-tabs-dashboard .nav-link').removeClass('active');
+            $(`.nav-link[href="?tab=${tab}"]`).addClass('active');
+            
+            // Show corresponding tab content
+            $('.tab-pane').removeClass('show active');
+            $(`#${tab}`).addClass('show active');
+        });
+        
+        function loadTabContent(tab) {
+            // Only load content if tab is empty
+            if ($(`#${tab}`).is(':empty') || $(`#${tab}`).hasClass('needs-refresh')) {
+                $.ajax({
+                    url: `/dashboard/?tab=${tab}`,
+                    method: 'GET',
+                    success: function(data) {
+                        // Extract tab content from response
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(data, 'text/html');
+                        const tabContent = doc.querySelector(`#${tab}`);
+                        
+                        if (tabContent) {
+                            $(`#${tab}`).html(tabContent.innerHTML);
+                        }
+                    },
+                    error: function() {
+                        $(`#${tab}`).html('<div class="alert alert-danger">Error loading content</div>');
+                    }
+                });
+            }
+        }
+        
+        // Initialize based on current URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentTab = urlParams.get('tab') || 'overview';
+        
+        if (currentTab && currentTab !== 'overview') {
+            $(`.nav-link[href="?tab=${currentTab}"]`).click();
+        }
+    });
+
+    $(document).ready(function() {
+    // Handle form submission for like buttons
+    $('form .like-btn').click(function(e) {
+        const btn = $(this);
+        const form = btn.closest('form');
+        
+        // Prevent default form submission if AJAX is supported
+        if (window.XMLHttpRequest) {
+            e.preventDefault();
+            
+            // Get profile ID from data attribute
+            const profileId = btn.data('profile-id');
+            
+            // Send AJAX request
+            sendLikeRequest(profileId, btn);
+        }
+        // If no AJAX support, form will submit normally
+    });
+    
+    // Handle AJAX like buttons in dropdown
+    $(document).on('click', '.ajax-like-btn', function(e) {
+        e.preventDefault();
+        const profileId = $(this).data('profile-id');
+        const btn = $(this);
+        
+        sendLikeRequest(profileId, btn);
+    });
+    
+    function sendLikeRequest(profileId, btn) {
+        // Show loading state
+        const originalText = btn.html();
+        btn.html('<span class="spinner-border spinner-border-sm me-1"></span>');
+        btn.prop('disabled', true);
+        
+        $.ajax({
+            url: `/like/${profileId}/`,
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            success: function(data) {
+                if (data.success) {
+                    if (data.action === 'liked') {
+                        // Update button to show liked state
+                        btn.html('<i class="bi bi-heart-fill me-1"></i>Liked');
+                        btn.removeClass('btn-primary').addClass('btn-success');
+                        
+                        // Show notification
+                        showNotification(data.message, 'success');
+                        
+                        // If mutual match, show special notification
+                        if (data.mutual) {
+                            setTimeout(() => {
+                                showNotification('🎉 It\'s a match! You both like each other!', 'success');
+                            }, 1000);
+                        }
+                    } else if (data.action === 'unliked') {
+                        // Reset button to original state
+                        btn.html('<i class="bi bi-heart me-1"></i>Like');
+                        btn.removeClass('btn-success').addClass('btn-primary');
+                        btn.prop('disabled', false);
+                        
+                        showNotification(data.message, 'info');
+                    }
+                } else {
+                    // Show error
+                    showNotification(data.error, 'error');
+                    btn.html(originalText);
+                    btn.prop('disabled', false);
+                }
+            },
+            error: function(xhr, status, error) {
+                // If AJAX fails, submit the form normally
+                showNotification('Error: ' + error, 'error');
+                btn.html(originalText);
+                btn.prop('disabled', false);
+                
+                // Fallback: submit the form
+                btn.closest('form').submit();
+            }
+        });
+    }
+    
+    function showNotification(message, type) {
+        // Remove any existing notifications
+        $('.like-notification').remove();
+        
+        // Create notification
+        const alertClass = {
+            'success': 'alert-success',
+            'error': 'alert-danger',
+            'info': 'alert-info'
+        }[type] || 'alert-info';
+        
+        const icon = {
+            'success': 'bi-check-circle-fill',
+            'error': 'bi-exclamation-circle-fill',
+            'info': 'bi-info-circle-fill'
+        }[type] || 'bi-info-circle-fill';
+        
+        const notification = $(`
+            <div class="alert ${alertClass} alert-dismissible fade show like-notification position-fixed" 
+                 style="top: 20px; right: 20px; z-index: 1050; min-width: 300px;">
+                <i class="bi ${icon} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `);
+        
+        $('body').append(notification);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            notification.alert('close');
+        }, 5000);
+    }
+    
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+
+{% endblock %}

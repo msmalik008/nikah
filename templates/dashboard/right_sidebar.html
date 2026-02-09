@@ -1,0 +1,139 @@
+<!-- Profile Summary -->
+<div class="suggestion-card">
+    <div class="text-center mb-3">
+        {% if user_profile.profile_pic %}
+        <img src="{{ user_profile.profile_pic.url }}" 
+             class="rounded-circle mb-2" 
+             style="width: 80px; height: 80px; object-fit: cover;">
+        {% else %}
+        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-2" 
+             style="width: 80px; height: 80px;">
+            {{ user.username|first|upper }}
+        </div>
+        {% endif %}
+        <h5 class="mb-1">{{ user.get_full_name|default:user.username }}</h5>
+        <p class="text-muted small mb-2">
+            <i class="bi bi-geo-alt me-1"></i>{{ user_profile.city|default:"Not set" }}
+        </p>
+        <a href="?tab=profile" class="btn btn-outline-primary btn-sm w-100">
+            <i class="bi bi-pencil me-1"></i> Edit Profile
+        </a>
+    </div>
+</div>
+
+<!-- Friend Suggestions -->
+<div class="suggestion-card">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="mb-0"><i class="bi bi-person-plus me-2"></i> Friend Suggestions</h6>
+        <a href="?tab=discover" class="text-primary small">See All</a>
+    </div>
+    
+    {% if friend_suggestions %}
+    {% for suggestion in friend_suggestions|slice:":3" %}
+    <div class="d-flex align-items-center mb-3">
+        <div class="position-relative me-3">
+            {% if suggestion.profile.profile_pic %}
+            <img src="{{ suggestion.profile.profile_pic.url }}" 
+                 class="rounded-circle" 
+                 style="width: 45px; height: 45px; object-fit: cover;">
+            {% else %}
+            <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" 
+                 style="width: 45px; height: 45px;">
+                {{ suggestion.username|first|upper }}
+            </div>
+            {% endif %}
+        </div>
+        <div class="flex-grow-1">
+            <h6 class="mb-0 small">{{ suggestion.get_full_name|default:suggestion.username }}</h6>
+            <small class="text-muted">{{ suggestion.mutual_friends }} mutual friends</small>
+        </div>
+        <form method="post" action="{% url 'friendship:send_friend_request' suggestion.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-person-plus"></i>
+            </button>
+        </form>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="text-muted small">No suggestions available</p>
+    {% endif %}
+</div>
+
+<!-- People Who Liked You -->
+<div class="suggestion-card">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="mb-0"><i class="bi bi-heart me-2"></i> Likes Received</h6>
+        <a href="?tab=matches" class="text-primary small">See All</a>
+    </div>
+    
+    {% if likes_received %}
+    {% for like in likes_received|slice:":3" %}
+    <div class="d-flex align-items-center mb-3">
+        <div class="position-relative me-3">
+            {% if like.liker.profile.profile_pic %}
+            <img src="{{ like.liker.profile.profile_pic.url }}" 
+                 class="rounded-circle" 
+                 style="width: 45px; height: 45px; object-fit: cover;">
+            {% else %}
+            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" 
+                 style="width: 45px; height: 45px;">
+                {{ like.liker.username|first|upper }}
+            </div>
+            {% endif %}
+        </div>
+        <div class="flex-grow-1">
+            <h6 class="mb-0 small">{{ like.liker.get_full_name|default:like.liker.username }}</h6>
+            <small class="text-muted">Liked your profile</small>
+        </div>
+        <div class="d-flex gap-1">
+            <form method="post" action="{% url 'like_profile' like.liker.profile.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success btn-sm">
+                    <i class="bi bi-heart-fill"></i>
+                </button>
+            </form>
+            <form method="post" action="{% url 'friendship:send_friend_request' like.liker.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-person-plus"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="text-muted small">No likes yet</p>
+    {% endif %}
+</div>
+
+<!-- Quick Stats -->
+<div class="suggestion-card">
+    <h6 class="mb-3"><i class="bi bi-bar-chart me-2"></i> Your Stats</h6>
+    <div class="row g-2">
+        <div class="col-6">
+            <div class="text-center p-2 border rounded">
+                <div class="fw-bold">{{ friends_count|default:0 }}</div>
+                <small class="text-muted">Friends</small>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="text-center p-2 border rounded">
+                <div class="fw-bold">{{ mutual_matches|default:0 }}</div>
+                <small class="text-muted">Matches</small>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="text-center p-2 border rounded">
+                <div class="fw-bold">{{ likes_received_count|default:0 }}</div>
+                <small class="text-muted">Likes</small>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="text-center p-2 border rounded">
+                <div class="fw-bold">{{ profile_views|default:0 }}</div>
+                <small class="text-muted">Views</small>
+            </div>
+        </div>
+    </div>
+</div>

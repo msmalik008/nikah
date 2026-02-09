@@ -1,0 +1,79 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Update Email - SoulMate{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card p-4">
+            <div class="text-center mb-4">
+                <h2 class="logo mb-2">Update Email Address</h2>
+                <p class="text-muted">Change your primary email address</p>
+            </div>
+            
+            <div class="alert alert-info mb-4">
+                <i class="fas fa-info-circle me-2"></i>
+                A verification email will be sent to your new address. You'll need to verify it before it becomes active.
+            </div>
+            
+            <form method="POST" novalidate>
+                {% csrf_token %}
+                
+                {% if form.errors %}
+                <div class="alert alert-danger">
+                    <strong>Please correct the errors below:</strong>
+                    <ul class="mb-0 mt-2">
+                        {% for field in form %}
+                            {% for error in field.errors %}
+                                <li>{{ field.label }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                        {% for error in form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                
+                <div class="mb-4">
+                    <label class="form-label">Current Email</label>
+                    <input type="email" class="form-control" value="{{ user.email }}" disabled>
+                    <small class="form-text text-muted">Your current verified email address</small>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="{{ form.new_email.id_for_label }}" class="form-label">
+                        <i class="fas fa-envelope me-1"></i>New Email Address
+                    </label>
+                    {{ form.new_email }}
+                </div>
+                
+                <div class="mb-4">
+                    <label for="{{ form.confirm_email.id_for_label }}" class="form-label">
+                        <i class="fas fa-envelope me-1"></i>Confirm New Email
+                    </label>
+                    {{ form.confirm_email }}
+                </div>
+                
+                <div class="mb-4">
+                    <label for="{{ form.current_password.id_for_label }}" class="form-label">
+                        <i class="fas fa-lock me-1"></i>Current Password
+                    </label>
+                    {{ form.current_password }}
+                    <small class="form-text text-muted">Enter your current password to confirm this change</small>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-paper-plane me-2"></i>Update Email
+                    </button>
+                    
+                    <a href="{% url 'accounts:account_settings' %}" class="btn btn-outline-light mt-2">
+                        <i class="fas fa-arrow-left me-1"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,289 @@
+{% extends 'accounts/base.html' %}
+{% load account_tags %}
+
+{% block title %}Activity History - SoulMate{% endblock %}
+
+{% block extra_css %}
+<style>
+    .activity-timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .activity-timeline::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--primary-color);
+    }
+    
+    .activity-item {
+        position: relative;
+        margin-bottom: 1.5rem;
+        padding-left: 1.5rem;
+    }
+    
+    .activity-item::before {
+        content: '';
+        position: absolute;
+        left: -0.5rem;
+        top: 0.5rem;
+        width: 1rem;
+        height: 1rem;
+        background: var(--primary-color);
+        border-radius: 50%;
+        border: 3px solid var(--dark-bg);
+    }
+    
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(156, 39, 176, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+    }
+    
+    .filter-badge {
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .filter-badge.active {
+        background: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-3">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Activity Summary</h5>
+                <div class="text-center mb-4">
+                    <h1 class="display-4">{{ page_obj.paginator.count }}</h1>
+                    <p class="text-muted">Total Activities</p>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Filter by Type</h6>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        <span class="badge filter-badge {% if not request.GET.activity_type %}active{% endif %}" 
+                              onclick="window.location='{% url 'accounts:activity_history' %}'">
+                            All
+                        </span>
+                        {% for type_value, type_name in activity_types %}
+                        <span class="badge filter-badge {% if request.GET.activity_type == type_value %}active{% endif %}" 
+                              onclick="window.location='{% url 'accounts:activity_history' %}?activity_type={{ type_value }}'">
+                            {{ type_name }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Export Data</h6>
+                    <button class="btn btn-outline-light btn-sm w-100">
+                        <i class="fas fa-download me-1"></i> Export as CSV
+                    </button>
+                </div>
+                
+                <div>
+                    <h6>Clear History</h6>
+                    <button class="btn btn-outline-danger btn-sm w-100" data-bs-toggle="modal" data-bs-target="#clearHistoryModal">
+                        <i class="fas fa-trash me-1"></i> Clear All Activity
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-9">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-history me-2"></i> Activity History
+                    </h4>
+                    
+                    <div class="btn-group" role="group">
+                        <a href="?days=7" class="btn btn-outline-light btn-sm {% if request.GET.days == '7' %}active{% endif %}">
+                            7 Days
+                        </a>
+                        <a href="?days=30" class="btn btn-outline-light btn-sm {% if request.GET.days == '30' or not request.GET.days %}active{% endif %}">
+                            30 Days
+                        </a>
+                        <a href="?days=90" class="btn btn-outline-light btn-sm {% if request.GET.days == '90' %}active{% endif %}">
+                            90 Days
+                        </a>
+                        <a href="?" class="btn btn-outline-light btn-sm">
+                            All Time
+                        </a>
+                    </div>
+                </div>
+                
+                {% if activities %}
+                <div class="activity-timeline">
+                    {% for activity in activities %}
+                    <div class="activity-item">
+                        <div class="d-flex">
+                            <div class="activity-icon">
+                                {% if activity.activity_type == 'login' %}
+                                    <i class="fas fa-sign-in-alt text-primary"></i>
+                                {% elif activity.activity_type == 'logout' %}
+                                    <i class="fas fa-sign-out-alt text-primary"></i>
+                                {% elif activity.activity_type == 'profile_update' %}
+                                    <i class="fas fa-edit text-warning"></i>
+                                {% elif activity.activity_type == 'profile_view' %}
+                                    <i class="fas fa-eye text-info"></i>
+                                {% elif activity.activity_type == 'signup' %}
+                                    <i class="fas fa-user-plus text-success"></i>
+                                {% else %}
+                                    <i class="fas fa-circle text-muted"></i>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">{{ activity.activity_type|format_activity_type }}</h6>
+                                        {% if activity.target_user %}
+                                            <small class="text-muted">
+                                                Target: {{ activity.target_user.username }}
+                                            </small>
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted">{{ activity.created_at|date:"M d, Y H:i" }}</small>
+                                </div>
+                                
+                                {% if activity.additional_info %}
+                                <div class="mt-2 p-2 bg-dark rounded">
+                                    <small class="text-muted">{{ activity.additional_info }}</small>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-globe me-1"></i>
+                                        {{ activity.ip_address|default:"Unknown IP" }}
+                                    </small>
+                                    {% if activity.user_agent %}
+                                    <small class="text-muted ms-3">
+                                        <i class="fas fa-desktop me-1"></i>
+                                        {{ activity.user_agent|truncatechars:30 }}
+                                    </small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Pagination -->
+                {% if page_obj.has_other_pages %}
+                <nav aria-label="Activity pagination" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.activity_type %}&activity_type={{ request.GET.activity_type }}{% endif %}{% if request.GET.days %}&days={{ request.GET.days }}{% endif %}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if request.GET.activity_type %}&activity_type={{ request.GET.activity_type }}{% endif %}{% if request.GET.days %}&days={{ request.GET.days }}{% endif %}">
+                                    {{ num }}
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.activity_type %}&activity_type={{ request.GET.activity_type }}{% endif %}{% if request.GET.days %}&days={{ request.GET.days }}{% endif %}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+                
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                    <h5>No Activity Found</h5>
+                    <p class="text-muted">Your activity history will appear here as you use the platform.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Clear History Modal -->
+<div class="modal fade" id="clearHistoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i> Clear Activity History
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to clear all your activity history?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-info-circle me-2"></i>
+                    This action cannot be undone. All your activity records will be permanently deleted.
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger">Clear All History</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Activity filtering
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-refresh every 30 seconds for new activities
+        setInterval(function() {
+            if (document.visibilityState === 'visible') {
+                window.location.reload();
+            }
+        }, 30000);
+    });
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add context data for the template
+    const activity_types = [
+        ['signup', 'Signup'],
+        ['login', 'Login'],
+        ['logout', 'Logout'],
+        ['profile_update', 'Profile Update'],
+        ['profile_view', 'Profile View'],
+        ['password_change', 'Password Change'],
+        ['email_change', 'Email Change'],
+    ];
+</script>
+{% endblock %}

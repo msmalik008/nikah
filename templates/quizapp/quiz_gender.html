@@ -1,0 +1,142 @@
+{% extends 'quizapp/base.html' %}
+
+{% block title %}Quiz - Gender{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Progress Bar -->
+            <div class="mb-5">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted">Step {{ progress }} of {{ total_steps }}</span>
+                    <span class="fw-bold">{{ progress_percentage|default:0 }}%</span>
+                </div>
+                <div class="progress" style="height: 10px;">
+                    <div class="progress-bar progress-bar-custom" 
+                         style="width: {{ progress_percentage|default:0 }}%"></div>
+                </div>
+            </div>
+            
+            <!-- Quiz Card -->
+            <div class="card border-0 shadow-soft rounded-xxl overflow-hidden">
+                <div class="card-body p-4 p-md-5">
+                    <!-- Step Header -->
+                    <div class="text-center mb-4">
+                        <div class="mb-3">
+                            <i class="bi bi-gender-ambiguous fs-1 text-primary"></i>
+                        </div>
+                        <h2 class="fw-bold mb-2">Select Your Gender</h2>
+                        <p class="text-muted">This helps us match you with compatible partners</p>
+                    </div>
+                    
+                    <!-- Form -->
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <div class="text-center mb-4">
+                                <label class="form-label fs-5 fw-bold">I identify as:</label>
+                            </div>
+                            
+                            <div class="row g-3">
+                                <!-- Male Option -->
+                                <div class="col-md-6">
+                                    <input type="radio" 
+                                           name="gender" 
+                                           value="M" 
+                                           id="gender_male" 
+                                           class="btn-check" 
+                                           {% if form.gender.value == 'M' %}checked{% endif %}
+                                           required>
+                                    <label for="gender_male" class="btn btn-outline-primary w-100 p-4 d-flex flex-column align-items-center border-2 rounded-xl">
+                                        <i class="bi bi-gender-male fs-1 mb-2"></i>
+                                        <span class="fs-5 fw-bold">Male</span>
+                                        <small class="text-muted mt-1">Looking for female partners</small>
+                                    </label>
+                                </div>
+                                
+                                <!-- Female Option -->
+                                <div class="col-md-6">
+                                    <input type="radio" 
+                                           name="gender" 
+                                           value="F" 
+                                           id="gender_female" 
+                                           class="btn-check" 
+                                           {% if form.gender.value == 'F' %}checked{% endif %}
+                                           required>
+                                    <label for="gender_female" class="btn btn-outline-primary w-100 p-4 d-flex flex-column align-items-center border-2 rounded-xl">
+                                        <i class="bi bi-gender-female fs-1 mb-2"></i>
+                                        <span class="fs-5 fw-bold">Female</span>
+                                        <small class="text-muted mt-1">Looking for male partners</small>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            {% if form.gender.errors %}
+                            <div class="invalid-feedback d-block text-center mt-3">
+                                {{ form.gender.errors.0 }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Preview -->
+                        <div class="alert alert-light border rounded-xl">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-check-circle-fill text-success fs-4 me-3"></i>
+                                <div>
+                                    <span class="fw-bold">Age saved:</span> {{ quiz_data.age }}
+                                    <div class="text-muted small">You can edit this later in your profile</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Navigation -->
+                        <div class="d-flex justify-content-between mt-5">
+                            <a href="{% url 'quiz_step' step='age' %}" class="btn btn-outline-primary btn-lg">
+                                <i class="bi bi-arrow-left me-2"></i>Back
+                            </a>
+                            
+                            <button type="submit" class="btn btn-primary btn-lg px-5">
+                                Continue <i class="bi bi-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Privacy Note -->
+            <div class="mt-4 text-center">
+                <div class="d-inline-flex align-items-center bg-light rounded-pill px-4 py-2">
+                    <i class="bi bi-lock text-primary me-2"></i>
+                    <small class="text-muted">We respect your privacy. This information is kept confidential.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // Gender selection styling
+        $('.btn-check').change(function() {
+            $('label.btn').removeClass('active');
+            $(`label[for="${$(this).attr('id')}"]`).addClass('active');
+        });
+        
+        // Initialize active state
+        $('.btn-check:checked').each(function() {
+            $(`label[for="${$(this).attr('id')}"]`).addClass('active');
+        });
+        
+        // Form submission
+        $('form').submit(function() {
+            $('button[type="submit"]').prop('disabled', true);
+            $('button[type="submit"]').html(`
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                Processing...
+            `);
+        });
+    });
+</script>
+{% endblock %}

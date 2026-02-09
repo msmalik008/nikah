@@ -1,0 +1,21 @@
+{% extends 'quizapp/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 text-center">
+        <h2>Step {{ progress }}: Preferences</h2>
+        <p class="lead">Share your interests:</p>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.preferences }}
+            <button type="submit" class="btn btn-primary btn-lg mt-3">Next</button>
+        </form>
+        <div class="progress mt-4">
+            <div class="progress-bar" style="width: {{ progress|floatformat:0 }}25%"></div>
+        </div>
+        <p class="mt-3 small">
+            Age: {{ quiz_data.age }} | Gender: {{ quiz_data.gender }}
+        </p>
+    </div>
+</div>
+{% endblock %}

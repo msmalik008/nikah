@@ -1,0 +1,204 @@
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card dashboard-card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold mb-0">My Profile</h5>
+                    <a href="{% url 'profile_edit' %}" class="btn btn-primary">
+                        <i class="bi bi-pencil me-2"></i>Edit Profile
+                    </a>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4 text-center mb-4">
+                        {% if user_profile.profile_pic %}
+                        <img src="{{ user_profile.profile_pic.url }}" 
+                             class="profile-image mb-3" 
+                             alt="{{ user.username }}">
+                        {% else %}
+                        <div class="profile-image bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-3">
+                            {{ user.username|first|upper }}
+                        </div>
+                        <a href="{% url 'profile_edit' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-camera me-1"></i>Add Photo
+                        </a>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-8">
+                        <table class="table">
+                            <tr>
+                                <th width="40%">Username</th>
+                                <td>{{ user.username }}</td>
+                            </tr>
+                            <tr>
+                                <th>Email</th>
+                                <td>{{ user.email }}</td>
+                            </tr>
+                            <tr>
+                                <th>Full Name</th>
+                                <td>{{ user.get_full_name|default:"Not set" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Age</th>
+                                <td>{{ user_profile.age|default:"Not set" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Gender</th>
+                                <td>{{ user_profile.get_gender_display|default:"Not set" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Location</th>
+                                <td>{{ user_profile.city|default:"Not set" }}, {{ user_profile.country }}</td>
+                            </tr>
+                            <tr>
+                                <th>Sect</th>
+                                <td>{{ user_profile.sect|default:"Not set" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Education</th>
+                                <td>{{ user_profile.education|default:"Not set" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Occupation</th>
+                                <td>{{ user_profile.occupation|default:"Not set" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Practice Level</th>
+                                <td>{{ user_profile.practice_level|default:"Not set" }}</td>
+                            </tr>
+                        </table>
+                        
+                        <h6 class="mt-4">Bio</h6>
+                        <p class="p-3 bg-light rounded">{{ user_profile.bio|default:"No bio added yet" }}</p>
+                        
+                        <h6 class="mt-4">Looking For</h6>
+                        <p class="p-3 bg-light rounded">{{ user_profile.seeking|default:"Not specified" }}</p>
+                        
+                        {% if user_profile.preferences %}
+                        <h6 class="mt-4">My Interests</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for pref in user_profile.preferences %}
+                            <span class="badge bg-primary">{{ pref }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Profile Completion -->
+        <div class="card dashboard-card shadow-sm mb-4">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Profile Strength</h6>
+                <div class="text-center mb-4">
+                    <div class="position-relative d-inline-block">
+                        <svg class="progress-ring" width="120" height="120" viewBox="0 0 100 100">
+                            <circle class="progress-ring-circle" 
+                                    stroke="var(--primary)" 
+                                    stroke-width="8" 
+                                    fill="transparent" 
+                                    r="40" 
+                                    cx="50" 
+                                    cy="50"
+                                    stroke-dasharray="251.2"
+                                    stroke-dashoffset="{{ progress_offset }}">
+                            </circle>
+                        </svg>
+                        <div class="position-absolute top-50 start-50 translate-middle">
+                            <span class="dashboard-stat">{{ profile_completion }}%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Basic Info</span>
+                            {% if user_profile.age and user_profile.gender %}
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                            <i class="bi bi-x-circle-fill text-danger"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Profile Photo</span>
+                            {% if user_profile.profile_pic %}
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                            <i class="bi bi-x-circle-fill text-danger"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Bio</span>
+                            {% if user_profile.bio %}
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                            <i class="bi bi-x-circle-fill text-danger"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Location</span>
+                            {% if user_profile.city and user_profile.country %}
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                            <i class="bi bi-x-circle-fill text-danger"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Preferences</span>
+                            {% if user_profile.preferences %}
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                            <i class="bi bi-x-circle-fill text-danger"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if profile_completion < 100 %}
+                <div class="d-grid mt-3">
+                    <a href="{% url 'profile_edit' %}" class="btn btn-primary">
+                        Complete Your Profile
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Account Settings -->
+        <div class="card dashboard-card shadow-sm">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Account Settings</h6>
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'profile_edit' %}" class="list-group-item list-group-item-action border-0 px-0">
+                        <i class="bi bi-person me-2"></i>Edit Profile
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action border-0 px-0">
+                        <i class="bi bi-shield me-2"></i>Privacy Settings
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action border-0 px-0">
+                        <i class="bi bi-bell me-2"></i>Notification Settings
+                    </a>
+                    <a href="{% url 'password_reset' %}" class="list-group-item list-group-item-action border-0 px-0">
+                        <i class="bi bi-key me-2"></i>Change Password
+                    </a>
+                    <a href="{% url 'logout' %}" class="list-group-item list-group-item-action border-0 px-0 text-danger">
+                        <i class="bi bi-box-arrow-right me-2"></i>Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

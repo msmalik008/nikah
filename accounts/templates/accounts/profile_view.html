@@ -1,0 +1,246 @@
+{% extends 'accounts/base.html' %}
+{% load account_tags %}
+{% load auth_tags %}
+
+{% block title %}My Profile - SoulMate{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stats-card {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        padding: 1rem;
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--secondary-color);
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+    
+    .info-card {
+        background: var(--card-bg);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-header">
+    <div class="row align-items-center">
+        <div class="col-md-3 text-center">
+            {% if profile.profile_pic %}
+                <img src="{{ profile.profile_pic.url }}" alt="Profile Picture" class="profile-pic">
+            {% else %}
+                <div class="profile-pic d-flex align-items-center justify-content-center" 
+                     style="background: rgba(255,255,255,0.1);">
+                    <i class="fas fa-user fa-4x text-light"></i>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-md-9">
+            <h1 class="text-white">{{ user.username }}</h1>
+            <p class="text-light mb-3">
+                {% if profile.bio %}
+                    {{ profile.bio|truncatewords:30 }}
+                {% else %}
+                    No bio yet. <a href="{% url 'accounts:profile_edit' %}" class="text-white">Add one</a>
+                {% endif %}
+            </p>
+            
+            <div class="d-flex gap-3">
+                <a href="{% url 'accounts:profile_edit' %}" class="btn btn-light">
+                    <i class="fas fa-edit me-1"></i> Edit Profile
+                </a>
+                <a href="{% url 'accounts:account_settings' %}" class="btn btn-outline-light">
+                    <i class="fas fa-cog me-1"></i> Settings
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <!-- Profile Completion -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Profile Completion</h5>
+                {% profile_completion_progress profile %}
+                
+                {% if not profile.completed %}
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Complete your profile for better matches!
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Quick Stats</h5>
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="stats-card">
+                            <div class="stat-number">0</div>
+                            <div class="stat-label">Matches</div>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="stats-card">
+                            <div class="stat-number">0</div>
+                            <div class="stat-label">Likes</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stats-card">
+                            <div class="stat-number">0</div>
+                            <div class="stat-label">Views</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stats-card">
+                            <div class="stat-number">{{ profile|profile_completion_percentage }}</div>
+                            <div class="stat-label">Complete</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <!-- Profile Information -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="card-title mb-0">Profile Information</h5>
+                    <span class="badge bg-{% if profile.approved %}success{% else %}warning{% endif %}">
+                        {% if profile.approved %}Approved{% else %}Pending Approval{% endif %}
+                    </span>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        {% profile_field_display profile "age" "Age" %}
+                        {% profile_field_display profile "gender" "Gender" %}
+                        {% profile_field_display profile "sect" "Religious Sect" %}
+                    </div>
+                    <div class="col-md-6">
+                        {% profile_field_display profile "education" "Education" %}
+                        {% profile_field_display profile "practice_level" "Practice Level" %}
+                        {% profile_field_display profile "city" "Location" %}
+                    </div>
+                </div>
+                
+                {% if profile.bio %}
+                <div class="mt-4">
+                    <h6>Bio</h6>
+                    <p class="text-light">{{ profile.bio }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Preferences from Landing Page -->
+        {% if landing_preferences %}
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">My Preferences</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Looking for:</strong> {{ profile|get_preference_display:"looking_for" }}</p>
+                        <p><strong>Marital Status:</strong> {{ profile|get_preference_display:"marital_status" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Religious Commitment:</strong> {{ profile|get_preference_display:"religious_commitment" }}</p>
+                        {% if profile.preferences.age_range %}
+                        <p><strong>Age Range:</strong> {{ profile.preferences.age_range|get_age_range }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Match Suggestions -->
+        {% if match_suggestions %}
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Match Suggestions</h5>
+                <p class="text-muted">Based on your preferences and profile</p>
+                
+                <div class="row">
+                    {% for match in match_suggestions %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                {% if match.profile.profile_pic %}
+                                    <img src="{{ match.profile.profile_pic.url }}" 
+                                         class="rounded-circle mb-3" 
+                                         style="width: 80px; height: 80px; object-fit: cover;">
+                                {% else %}
+                                    <div class="rounded-circle mb-3 d-flex align-items-center justify-content-center" 
+                                         style="width: 80px; height: 80px; background: rgba(156, 39, 176, 0.2);">
+                                        <i class="fas fa-user fa-2x text-primary"></i>
+                                    </div>
+                                {% endif %}
+                                
+                                <h6>{{ match.user.username }}</h6>
+                                <p class="small text-muted">
+                                    {{ match.profile.age }} • {{ match.profile.get_gender_display }}
+                                </p>
+                                
+                                <div class="compatibility-badge mb-3">
+                                    {{ match.score }}% Match
+                                </div>
+                                
+                                <a href="{% url 'accounts:view_profile' match.user.id %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    View Profile
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="text-center mt-3">
+                    <a href="{% url 'dashboard:dashboard' %}?tab=discover" class="btn btn-primary">
+                        <i class="fas fa-search me-1"></i> Discover More Matches
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% elif profile_completion >= 50 %}
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <h5>Ready to Find Matches?</h5>
+                <p class="text-muted">Complete your profile to get personalized match suggestions</p>
+                <a href="{% url 'accounts:profile_edit' %}" class="btn btn-primary">
+                    <i class="fas fa-edit me-1"></i> Complete Profile
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

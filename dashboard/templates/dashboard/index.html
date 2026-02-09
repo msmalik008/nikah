@@ -1,0 +1,598 @@
+<!-- dashboard/templates/dashboard/index.html -->
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block dashboard_content %}
+<div class="row">
+    <!-- Welcome Section -->
+    <div class="col-12 mb-4">
+        <div class="dashboard-card">
+            <div class="dashboard-card-header">
+                <div>
+                    <h1 class="dashboard-card-title">Welcome back, {{ user.get_full_name|default:user.username }}! 👋</h1>
+                    <p class="text-muted mb-0">Here's what's happening with your matches today</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'accounts:people_nearby' %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-search me-1"></i> Discover People
+                    </a>
+                    <a href="{% url 'accounts:profile_edit' %}" class="btn btn-outline-light btn-sm">
+                        <i class="fas fa-edit me-1"></i> Edit Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Quick Stats -->
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="stat-card">
+            <i class="fas fa-heart fa-2x mb-3" style="color: var(--accent-color);"></i>
+            <div class="stat-number">{{ total_matches|default:"0" }}</div>
+            <div class="stat-label">Total Matches</div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="stat-card">
+            <i class="fas fa-eye fa-2x mb-3" style="color: var(--primary-color);"></i>
+            <div class="stat-number">{{ profile_views|default:"0" }}</div>
+            <div class="stat-label">Profile Views</div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="stat-card">
+            <i class="fas fa-users fa-2x mb-3" style="color: var(--secondary-color);"></i>
+            <div class="stat-number">{{ new_matches_today|default:"0" }}</div>
+            <div class="stat-label">New Today</div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="stat-card">
+            <i class="fas fa-comments fa-2x mb-3" style="color: #4CAF50;"></i>
+            <div class="stat-number">{{ unread_messages_count|default:"0" }}</div>
+            <div class="stat-label">Unread Messages</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- People You May Like -->
+    <div class="col-lg-8 mb-4">
+        <div class="dashboard-card">
+            <div class="dashboard-card-header">
+                <h2 class="dashboard-card-title">People You May Like</h2>
+                <a href="{% url 'accounts:people_nearby' %}" class="btn btn-link btn-sm">
+                    View All <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+            
+            <div class="row" id="peopleSuggestions">
+                {% for person in suggested_people|slice:":4" %}
+                <div class="col-lg-6 mb-3">
+                    <div class="match-card dashboard-card">
+                        <!-- Profile Image -->
+                        {% if person.profile_image %}
+                        <img src="{{ person.profile_image.url }}" 
+                             alt="{{ person.user.get_full_name }}" 
+                             class="match-img">
+                        {% else %}
+                        <img src="https://via.placeholder.com/300x200/9c27b0/ffffff?text=SoulMate" 
+                             alt="{{ person.user.get_full_name }}" 
+                             class="match-img">
+                        {% endif %}
+                        
+                        <!-- Distance Badge -->
+                        {% if person.distance %}
+                        <div class="position-absolute top-2 start-2">
+                            <span class="badge bg-dark">
+                                <i class="fas fa-map-marker-alt me-1"></i>{{ person.distance }} km
+                            </span>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Action Overlay -->
+                        <div class="match-overlay">
+                            <div class="w-100">
+                                <a href="{% url 'accounts:view_profile' person.user.id %}" 
+                                   class="btn btn-primary btn-sm w-100 mb-2">
+                                    <i class="fas fa-eye me-1"></i> View Profile
+                                </a>
+                                <a href="{% url 'chat:send_message' person.user.id %}" 
+                                   class="btn btn-success btn-sm w-100 mb-2">
+                                    <i class="fas fa-envelope me-1"></i> Message
+                                </a>
+                                <button onclick="sendLike({{ person.user.id }})" 
+                                        class="btn btn-danger btn-sm w-100">
+                                    <i class="fas fa-heart me-1"></i> Like
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Profile Info -->
+                        <div class="match-info">
+                            <h5 class="match-name">
+                                {{ person.user.get_full_name|default:person.user.username }}, 
+                                {{ person.age|default:"25" }}
+                            </h5>
+                            <p class="match-age text-muted mb-2">
+                                <i class="fas fa-map-marker-alt me-1"></i>{{ person.city|default:"Unknown" }}
+                            </p>
+                            <div class="d-flex gap-1 flex-wrap">
+                                {% for interest in person.interests.all|slice:":3" %}
+                                <span class="badge bg-dark">{{ interest.name }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12 text-center py-4">
+                    <i class="fas fa-heart-broken fa-3x mb-3" style="color: var(--text-muted);"></i>
+                    <h4>No suggestions yet</h4>
+                    <p class="text-muted">Complete your profile to get better suggestions</p>
+                    <a href="{% url 'accounts:profile_edit' %}" class="btn btn-primary">
+                        <i class="fas fa-edit me-1"></i> Complete Profile
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- People Nearby -->
+        <div class="dashboard-card mb-4">
+            <div class="dashboard-card-header">
+                <h2 class="dashboard-card-title">People Nearby</h2>
+                <button onclick="loadPeopleNearby()" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-redo me-1"></i> Refresh
+                </button>
+            </div>
+            
+            <!-- Statistics (optional) -->
+            <div id="peopleStats" class="px-3 pb-2">
+                <!-- Will be filled by JavaScript -->
+            </div>
+            
+            <!-- People Grid - Loaded via AJAX -->
+            <div class="row" id="peopleSuggestions">
+                <!-- Initial loading state -->
+                <div class="col-12 text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Finding people nearby...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Timeline -->
+        <div class="dashboard-card mt-4">
+            <div class="dashboard-card-header">
+                <h2 class="dashboard-card-title">Recent Timeline</h2>
+                <a href="{% url 'useractivity:timeline' %}" class="btn btn-link btn-sm">
+                    View Full Timeline
+                </a>
+            </div>
+            
+            <div id="timelinePosts">
+                {% for post in recent_posts|slice:":3" %}
+                <div class="timeline-post">
+                    <div class="post-header">
+                        {% if post.user.userprofile.profile_image %}
+                        <img src="{{ post.user.userprofile.profile_image.url }}" 
+                             alt="{{ post.user.username }}" 
+                             class="post-avatar">
+                        {% else %}
+                        <div class="post-avatar bg-primary d-flex align-items-center justify-content-center">
+                            <i class="fas fa-user text-white"></i>
+                        </div>
+                        {% endif %}
+                        <div class="post-user-info">
+                            <h6 class="post-username">{{ post.user.get_full_name|default:post.user.username }}</h6>
+                            <span class="post-time">{{ post.created_at|timesince }} ago</span>
+                        </div>
+                    </div>
+                    
+                    <div class="post-content">
+                        <p>{{ post.content|truncatechars:200 }}</p>
+                        {% if post.image %}
+                        <img src="{{ post.image.url }}" alt="Post image" class="post-image">
+                        {% endif %}
+                    </div>
+                    
+                    <div class="post-actions">
+                        <button class="post-action-btn like-post-btn" 
+                                data-post-id="{{ post.id }}"
+                                onclick="likePost({{ post.id }})">
+                            <i class="fas fa-heart"></i>
+                            <span class="count">{{ post.likes_count|default:"0" }}</span>
+                        </button>
+                        
+                        <button class="post-action-btn comment-post-btn" 
+                                onclick="focusComment({{ post.id }})">
+                            <i class="fas fa-comment"></i>
+                            <span>{{ post.comments_count|default:"0" }}</span>
+                        </button>
+                        
+                        <button class="post-action-btn share-post-btn" 
+                                onclick="sharePost({{ post.id }})">
+                            <i class="fas fa-share"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Comment Form -->
+                    <div class="comment-section" id="comment-section-{{ post.id }}" style="display: none;">
+                        <form class="comment-form" onsubmit="submitComment(event, {{ post.id }})">
+                            <input type="text" class="comment-input" 
+                                   placeholder="Write a comment..." 
+                                   id="comment-input-{{ post.id }}">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-4">
+                    <i class="fas fa-newspaper fa-3x mb-3" style="color: var(--text-muted);"></i>
+                    <h4>No posts yet</h4>
+                    <p class="text-muted">Be the first to post in your timeline!</p>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPostModal">
+                        <i class="fas fa-plus me-1"></i> Create Post
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions & Notifications -->
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="dashboard-card mb-4">
+            <div class="dashboard-card-header">
+                <h2 class="dashboard-card-title">Quick Actions</h2>
+            </div>
+            
+            <div class="row g-2">
+                <div class="col-6">
+                    <a href="{% url 'accounts:profile_edit' %}" class="quick-action-btn">
+                        <i class="fas fa-user-edit fa-lg"></i>
+                        <span>Edit Profile</span>
+                    </a>
+                </div>
+                
+                <div class="col-6">
+                    <a href="{% url 'accounts:people_nearby' %}" class="quick-action-btn">
+                        <i class="fas fa-search fa-lg"></i>
+                        <span>Find People</span>
+                    </a>
+                </div>
+                
+                <div class="col-6">
+                    <a href="{% url 'friendship:get_likes' %}" class="quick-action-btn">
+                        <i class="fas fa-heart fa-lg"></i>
+                        <span>View Likes</span>
+                        {% if new_likes_count %}
+                        <span class="badge bg-danger position-absolute top-0 end-0">
+                            {{ new_likes_count }}
+                        </span>
+                        {% endif %}
+                    </a>
+                </div>
+                
+                <div class="col-6">
+                    <a href="{% url 'accounts:activity_history' %}" class="quick-action-btn">
+                        <i class="fas fa-history fa-lg"></i>
+                        <span>Activity Log</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Activity -->
+        <div class="dashboard-card mb-4">
+            <div class="dashboard-card-header">
+                <h2 class="dashboard-card-title">Recent Activity</h2>
+                <a href="{% url 'useractivity:activity_stream' %}" class="btn btn-link btn-sm">
+                    View All
+                </a>
+            </div>
+            
+            <div class="activity-feed">
+                {% for activity in recent_activities|slice:":5" %}
+                <div class="activity-item d-flex align-items-start mb-3">
+                    <div class="activity-icon me-3">
+                        {% if activity.activity_type == 'profile_viewed' %}
+                        <i class="fas fa-eye text-primary"></i>
+                        {% elif activity.activity_type == 'like_sent' or activity.activity_type == 'profile_liked' %}
+                        <i class="fas fa-heart text-danger"></i>
+                        {% elif activity.activity_type == 'message_sent' %}
+                        <i class="fas fa-envelope text-info"></i>
+                        {% elif activity.activity_type == 'post_created' %}
+                        <i class="fas fa-newspaper text-success"></i>
+                        {% else %}
+                        <i class="fas fa-bell text-warning"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <p class="mb-1">{{ activity.description }}</p>
+                        <small class="text-muted">{{ activity.created_at|timesince }} ago</small>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-3">
+                    <i class="fas fa-bell-slash fa-2x mb-2" style="color: var(--text-muted);"></i>
+                    <p class="text-muted mb-0">No recent activity</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Recent Messages -->
+        <div class="dashboard-card">
+            <div class="dashboard-card-header">
+                <h2 class="dashboard-card-title">Recent Messages</h2>
+                <a href="{% url 'chat:chat' %}" class="btn btn-link btn-sm">
+                    View All
+                </a>
+            </div>
+            
+            <div class="conversation-list">
+                {% for conversation in recent_conversations|slice:":5" %}
+                <a href="{% url 'chat:chat' %}" 
+                   class="message-preview">
+                    <div class="d-flex align-items-center">
+                        <!-- Avatar -->
+                        {% if conversation.user.userprofile.profile_image %}
+                        <img src="{{ conversation.user.userprofile.profile_image.url }}" 
+                             alt="{{ conversation.user.username }}" 
+                             class="rounded-circle me-3" style="width: 40px; height: 40px; object-fit: cover;">
+                        {% else %}
+                        <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-3" 
+                             style="width: 40px; height: 40px;">
+                            <i class="fas fa-user text-white"></i>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Conversation Info -->
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between">
+                                <h6 class="mb-0">{{ conversation.user.get_full_name|default:conversation.user.username }}</h6>
+                                <small class="text-muted">{{ conversation.last_message_time|timesince }}</small>
+                            </div>
+                            <p class="text-muted mb-0 text-truncate">{{ conversation.last_message|truncatechars:30 }}</p>
+                        </div>
+                    </div>
+                </a>
+                {% empty %}
+                <div class="text-center py-3">
+                    <i class="fas fa-comments fa-2x mb-2" style="color: var(--text-muted);"></i>
+                    <p class="text-muted mb-0">No recent messages</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Post Modal -->
+<div class="modal fade" id="createPostModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Create Post</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createPostForm" method="POST" action="{% url 'useractivity:create_post' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <textarea class="form-control" name="content" rows="4" 
+                                  placeholder="What's on your mind?" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Add Image (Optional)</label>
+                        <input type="file" class="form-control" name="image" accept="image/*">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="createPostForm" class="btn btn-primary">Post</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Dashboard JavaScript Functions
+
+function sendLike(userId) {
+    $.ajax({
+        url: `/friendship/like/${userId}/`,
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+            if (response.success) {
+                showToast('Like sent successfully!', 'success');
+                // Remove the card
+                $(`.match-card [data-user-id="${userId}"]`).closest('.col-lg-6').fadeOut();
+                
+                // Check for mutual like
+                if (response.mutual_like) {
+                    showToast('It\'s a match! 💕', 'success');
+                }
+            }
+        }
+    });
+}
+
+function likePost(postId) {
+    $.ajax({
+        url: `/useractivity/post/${postId}/like/`,
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+            if (response.success) {
+                const btn = $(`.like-post-btn[data-post-id="${postId}"]`);
+                const icon = btn.find('i');
+                const countSpan = btn.find('.count');
+                
+                if (response.action === 'liked') {
+                    icon.addClass('text-danger');
+                    showToast('Post liked!', 'success');
+                } else {
+                    icon.removeClass('text-danger');
+                    showToast('Post unliked', 'info');
+                }
+                
+                countSpan.text(response.likes_count);
+            }
+        }
+    });
+}
+
+function focusComment(postId) {
+    $(`#comment-section-${postId}`).toggle();
+    $(`#comment-input-${postId}`).focus();
+}
+
+function submitComment(event, postId) {
+    event.preventDefault();
+    const input = $(`#comment-input-${postId}`);
+    const content = input.val().trim();
+    
+    if (content) {
+        $.ajax({
+            url: `/useractivity/post/${postId}/comment/`,
+            type: 'POST',
+            data: {
+                content: content,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    input.val('');
+                    showToast('Comment posted!', 'success');
+                    // You can add the new comment to the UI here
+                }
+            }
+        });
+    }
+}
+
+function sharePost(postId) {
+    // Implement share functionality
+    showToast('Share feature coming soon!', 'info');
+}
+
+function showToast(message, type = 'info') {
+    const toast = $(`
+        <div class="toast align-items-center text-white bg-${type} border-0 position-fixed bottom-0 end-0 m-3" 
+             role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `);
+    
+    $('body').append(toast);
+    const bsToast = new bootstrap.Toast(toast[0]);
+    bsToast.show();
+    
+    // Remove after hide
+    toast.on('hidden.bs.toast', function() {
+        $(this).remove();
+    });
+}
+
+// Auto-refresh dashboard data
+function refreshDashboardData() {
+    $.ajax({
+        url: '{% url "dashboard:dashboard" %}',
+        type: 'GET',
+        data: {
+            'refresh': true,
+            'section': 'stats'
+        },
+        success: function(response) {
+            // Update stats dynamically if needed
+            console.log('Dashboard refreshed');
+        }
+    });
+}
+
+// Refresh every 60 seconds
+setInterval(refreshDashboardData, 60000);
+
+// Initialize tooltips
+$(document).ready(function() {
+    $('[data-bs-toggle="tooltip"]').tooltip();
+});
+
+function loadPeopleNearby() {
+    $.ajax({
+        url: '{% url "accounts:people_nearby" %}',
+        type: 'GET',
+        beforeSend: function() {
+            $('#peopleSuggestions').html(`
+                <div class="col-12 text-center py-5">
+                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Finding compatible people nearby...</p>
+                </div>
+            `);
+        },
+        success: function(response) {
+            if (response.success) {
+                $('#peopleSuggestions').html(response.html);
+                
+                // Update statistics if available
+                if (response.statistics) {
+                    updatePeopleStats(response.statistics);
+                }
+                
+                // Update count badge
+                updatePeopleCount(response.count);
+                
+                // Reinitialize tooltips
+                $('[data-bs-toggle="tooltip"]').tooltip();
+            } else {
+                $('#peopleSuggestions').html(response.html);
+            }
+        },
+        error: function() {
+            // Use error template via render_to_string alternative
+            $('#peopleSuggestions').html(`
+                <div class="col-12 text-center py-5">
+                    <i class="fas fa-wifi-slash fa-4x mb-3" style="color: #f44336;"></i>
+                    <h4>Network Error</h4>
+                    <p class="text-muted mb-4">Please check your connection</p>
+                    <button onclick="loadPeopleNearby()" class="btn btn-primary">
+                        <i class="fas fa-redo me-1"></i> Retry
+                    </button>
+                </div>
+            `);
+        }
+    });
+}
+
+// Other functions remain the same...
+</script>
+{% endblock %}

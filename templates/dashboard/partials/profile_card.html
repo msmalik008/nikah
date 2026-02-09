@@ -1,0 +1,36 @@
+<div class="profile-card">
+    <div class="text-center">
+        {% if profile.profile_pic %}
+        <img src="{{ profile.profile_pic.url }}" 
+             class="profile-image mb-3" 
+             alt="{{ profile.user.username }}">
+        {% else %}
+        <div class="profile-image bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-3">
+            {{ profile.user.username|first|upper }}
+        </div>
+        {% endif %}
+        
+        <h5 class="fw-bold mb-1">{{ profile.user.get_full_name|default:profile.user.username }}</h5>
+        <p class="text-muted mb-3">
+            <i class="bi bi-geo-alt me-1"></i>{{ profile.city|default:"Not set" }}
+        </p>
+        
+        <div class="d-flex justify-content-center gap-2">
+            {% if profile.user != request.user %}
+            <form method="post" action="{% url 'like_profile' profile.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-heart me-1"></i>Like
+                </button>
+            </form>
+            
+            <form method="post" action="{% url 'friendship:send_friend_request' profile.user.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-person-plus me-1"></i>Add Friend
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>

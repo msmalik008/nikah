@@ -1,0 +1,159 @@
+{% extends 'quizapp/base.html' %}
+
+{% block title %}Login - Modern Match{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-0 shadow-soft rounded-xxl overflow-hidden">
+                <div class="row g-0">
+                    <!-- Left Column - Form -->
+                    <div class="col-md-7 p-4 p-md-5">
+                        <div class="card-body">
+                            <div class="text-center mb-4">
+                                <h3 class="fw-bold text-primary">Welcome Back</h3>
+                                <p class="text-muted">Sign in to your ModernMatch account</p>
+                            </div>
+                            
+                            {% if form.errors %}
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                Invalid username or password. Please try again.
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                            {% endif %}
+                            
+                            <form method="post" novalidate>
+                                {% csrf_token %}
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.username.id_for_label }}" class="form-label">
+                                        <i class="bi bi-person me-1"></i>Username or Email
+                                    </label>
+                                    <input type="text" 
+                                           name="{{ form.username.name }}"
+                                           id="{{ form.username.id_for_label }}"
+                                           class="form-control form-control-lg {% if form.username.errors %}is-invalid{% endif %}"
+                                           placeholder="Enter your username or email"
+                                           required
+                                           autofocus>
+                                    {% if form.username.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.username.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.password.id_for_label }}" class="form-label">
+                                        <i class="bi bi-lock me-1"></i>Password
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="password" 
+                                               name="{{ form.password.name }}"
+                                               id="{{ form.password.id_for_label }}"
+                                               class="form-control form-control-lg {% if form.password.errors %}is-invalid{% endif %}"
+                                               placeholder="Enter your password"
+                                               required>
+                                        <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </div>
+                                    {% if form.password.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.password.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="remember_me" id="rememberMe">
+                                        <label class="form-check-label" for="rememberMe">
+                                            Remember me
+                                        </label>
+                                    </div>
+                                    <a href="{% url 'password_reset' %}" class="text-decoration-none text-primary">
+                                        Forgot password?
+                                    </a>
+                                </div>
+                                
+                                <div class="d-grid mb-3">
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+                                    </button>
+                                </div>
+                                
+                                <div class="text-center">
+                                    <p class="text-muted mb-3">Or sign in with</p>
+                                    <div class="d-flex justify-content-center gap-3">
+                                        <a href="#" class="btn btn-outline-primary">
+                                            <i class="bi bi-google"></i> Google
+                                        </a>
+                                        <a href="#" class="btn btn-outline-primary">
+                                            <i class="bi bi-facebook"></i> Facebook
+                                        </a>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column - Welcome -->
+                    <div class="col-md-5 d-none d-md-block bg-primary text-white p-4 p-md-5">
+                        <div class="card-body h-100 d-flex flex-column justify-content-center">
+                            <div class="text-center">
+                                <i class="bi bi-heart-fill display-1 mb-3"></i>
+                                <h3 class="fw-bold mb-3">New Here?</h3>
+                                <p class="mb-4">
+                                    Join our community of singles looking for meaningful relationships.
+                                </p>
+                                <a href="{% url 'quiz_step' step='age' %}" class="btn btn-light btn-lg w-100">
+                                    <i class="bi bi-person-plus me-2"></i>Create Account
+                                </a>
+                                <div class="mt-4">
+                                    <small class="opacity-75">
+                                        <i class="bi bi-shield-check me-1"></i>100% Secure & Verified
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-4">
+                <p class="text-muted">
+                    Don't have an account? 
+                    <a href="{% url 'quiz_step' step='age' %}" class="text-primary fw-bold text-decoration-none">
+                        Start the matching quiz
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // Toggle password visibility
+        $('#togglePassword').click(function() {
+            const passwordInput = $('#{{ form.password.id_for_label }}');
+            const type = passwordInput.attr('type') === 'password' ? 'text' : 'password';
+            passwordInput.attr('type', type);
+            $(this).find('i').toggleClass('bi-eye bi-eye-slash');
+        });
+        
+        // Form validation
+        $('form').submit(function() {
+            const submitBtn = $(this).find('button[type="submit"]');
+            submitBtn.prop('disabled', true);
+            submitBtn.html(`
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                Signing in...
+            `);
+        });
+    });
+</script>
+{% endblock %}

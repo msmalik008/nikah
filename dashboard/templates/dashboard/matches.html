@@ -1,0 +1,328 @@
+<!-- dashboard/templates/dashboard/matches.html -->
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block dashboard_content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="dashboard-card">
+            <div class="dashboard-card-header">
+                <h2 class="dashboard-card-title">Your Matches</h2>
+                <div class="d-flex gap-2">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" 
+                                data-bs-toggle="dropdown">
+                            <i class="fas fa-filter me-1"></i> Filter
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-dark">
+                            <a class="dropdown-item" href="?filter=recent">Most Recent</a>
+                            <a class="dropdown-item" href="?filter=compatible">Most Compatible</a>
+                            <a class="dropdown-item" href="?filter=online">Online Now</a>
+                            <a class="dropdown-item" href="?filter=nearby">Nearby</a>
+                        </div>
+                    </div>
+                    
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" 
+                                data-bs-toggle="dropdown">
+                            <i class="fas fa-sort me-1"></i> Sort By
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-dark">
+                            <a class="dropdown-item" href="?sort=name">Name (A-Z)</a>
+                            <a class="dropdown-item" href="?sort=compatibility">Compatibility</a>
+                            <a class="dropdown-item" href="?sort=distance">Distance</a>
+                            <a class="dropdown-item" href="?sort=activity">Last Active</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Match Filters -->
+            <div class="row mb-4">
+                <div class="col-md-3 mb-2">
+                    <input type="text" class="form-control" placeholder="Search matches..." 
+                           id="matchSearch" onkeyup="filterMatches()">
+                </div>
+                <div class="col-md-3 mb-2">
+                    <select class="form-select" id="matchGender" onchange="filterMatches()">
+                        <option value="">All Genders</option>
+                        <option value="M">Male</option>
+                        <option value="F">Female</option>
+                    </select>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <input type="number" class="form-control" placeholder="Max Age" 
+                           id="maxAge" onchange="filterMatches()">
+                </div>
+                <div class="col-md-3 mb-2">
+                    <select class="form-select" id="matchSort" onchange="filterMatches()">
+                        <option value="compatibility">Sort by Compatibility</option>
+                        <option value="recent">Sort by Recent</option>
+                        <option value="distance">Sort by Distance</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Matches Grid -->
+<div class="row" id="matchesGrid">
+    {% for match in matches %}
+    <div class="col-xl-3 col-lg-4 col-md-6 mb-4 match-item" 
+         data-name="{{ match.name|lower }}"
+         data-gender="{{ match.gender }}"
+         data-age="{{ match.age }}"
+         data-compatibility="{{ match.compatibility }}">
+        <div class="match-card dashboard-card">
+            <!-- Online Indicator -->
+            {% if match.is_online %}
+            <div class="position-absolute top-2 start-2">
+                <span class="online-indicator" data-bs-toggle="tooltip" 
+                      title="Online Now"></span>
+            </div>
+            {% endif %}
+            
+            <!-- Compatibility Badge -->
+            <div class="match-percentage">{{ match.compatibility }}%</div>
+            
+            <!-- Match Image -->
+            <img src="{{ match.profile_image.url|default:'https://via.placeholder.com/300x200/9c27b0/ffffff?text=SoulMate' }}" 
+                 alt="{{ match.name }}" 
+                 class="match-img lazy-load" 
+                 data-src="{{ match.profile_image.url }}">
+            
+            <!-- Match Overlay -->
+            <div class="match-overlay">
+                <div class="w-100">
+                    <div class="d-flex gap-2 mb-2">
+                        <a href="{% url 'dashboard:view_profile' match.id %}" 
+                           class="btn btn-primary btn-sm flex-grow-1">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="{% url 'dashboard:send_message' match.id %}" 
+                           class="btn btn-success btn-sm flex-grow-1">
+                            <i class="fas fa-envelope"></i>
+                        </a>
+                        <button class="btn btn-danger btn-sm flex-grow-1" 
+                                onclick="removeMatch({{ match.id }})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    {% if match.is_online %}
+                    <button class="btn btn-warning btn-sm w-100" 
+                            onclick="startVideoCall({{ match.id }})">
+                        <i class="fas fa-video me-1"></i> Video Call
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Match Info -->
+            <div class="match-info">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="match-name">{{ match.name }}, {{ match.age }}</h5>
+                        <p class="text-muted mb-1">
+                            <i class="fas fa-map-marker-alt me-1"></i>{{ match.location }}
+                        </p>
+                    </div>
+                    <span class="badge bg-{{ match.status_color }}">{{ match.status }}</span>
+                </div>
+                
+                <!-- Interests -->
+                <div class="d-flex gap-1 flex-wrap mt-2">
+                    {% for interest in match.interests|slice:":3" %}
+                    <span class="badge bg-dark">{{ interest }}</span>
+                    {% endfor %}
+                    {% if match.interests|length > 3 %}
+                    <span class="badge bg-secondary">+{{ match.interests|length|add:"-3" }}</span>
+                    {% endif %}
+                </div>
+                
+                <!-- Last Active -->
+                <div class="d-flex justify-content-between align-items-center mt-2 pt-2" 
+                     style="border-top: 1px solid rgba(255,255,255,0.1);">
+                    <small class="text-muted">
+                        <i class="fas fa-clock me-1"></i>{{ match.last_active }}
+                    </small>
+                    <small class="text-muted">
+                        <i class="fas fa-heart me-1"></i>{{ match.common_interests }} common
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="dashboard-card text-center py-5">
+            <i class="fas fa-heart-broken fa-4x mb-3" style="color: var(--text-muted);"></i>
+            <h3>No matches found</h3>
+            <p class="text-muted mb-4">Try adjusting your filters or complete your profile for better matches</p>
+            <a href="{% url 'accounts:profile_edit' %}" class="btn btn-primary me-2">
+                <i class="fas fa-edit me-1"></i> Complete Profile
+            </a>
+            <a href="{% url 'dashboard:discover' %}" class="btn btn-outline-light">
+                <i class="fas fa-search me-1"></i> Discover More
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if matches.has_other_pages %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="Matches pagination">
+            <ul class="pagination justify-content-center">
+                {% if matches.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ matches.previous_page_number }}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+                
+                {% for num in matches.paginator.page_range %}
+                    {% if matches.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > matches.number|add:"-3" and num < matches.number|add:"3" %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if matches.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ matches.next_page_number }}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Filter matches function
+function filterMatches() {
+    const searchTerm = $('#matchSearch').val().toLowerCase();
+    const selectedGender = $('#matchGender').val();
+    const maxAge = $('#maxAge').val();
+    const sortBy = $('#matchSort').val();
+    
+    $('.match-item').each(function() {
+        const name = $(this).data('name');
+        const gender = $(this).data('gender');
+        const age = $(this).data('age');
+        const compatibility = $(this).data('compatibility');
+        
+        let show = true;
+        
+        // Filter by search
+        if (searchTerm && !name.includes(searchTerm)) {
+            show = false;
+        }
+        
+        // Filter by gender
+        if (selectedGender && gender !== selectedGender) {
+            show = false;
+        }
+        
+        // Filter by age
+        if (maxAge && age > parseInt(maxAge)) {
+            show = false;
+        }
+        
+        if (show) {
+            $(this).show();
+        } else {
+            $(this).hide();
+        }
+    });
+    
+    // Sort matches
+    if (sortBy === 'compatibility') {
+        $('#matchesGrid').html(
+            $('#matchesGrid .match-item').sort(function(a, b) {
+                return $(b).data('compatibility') - $(a).data('compatibility');
+            })
+        );
+    } else if (sortBy === 'recent') {
+        // Sort by recent logic here
+    }
+}
+
+// Remove match function
+function removeMatch(matchId) {
+    if (confirm('Are you sure you want to remove this match?')) {
+        $.ajax({
+            url: `/dashboard/match/${matchId}/remove/`,
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    $(`.match-item[data-match-id="${matchId}"]`).fadeOut(300, function() {
+                        $(this).remove();
+                    });
+                }
+            }
+        });
+    }
+}
+
+// Start video call
+function startVideoCall(matchId) {
+    window.location.href = `/dashboard/video-call/${matchId}/`;
+}
+
+// Initialize
+$(document).ready(function() {
+    // Initialize tooltips
+    $('[data-bs-toggle="tooltip"]').tooltip();
+    
+    // Load more matches on scroll
+    let page = 1;
+    let loading = false;
+    
+    $(window).scroll(function() {
+        if ($(window).scrollTop() + $(window).height() >= $(document).height() - 100) {
+            if (!loading) {
+                loading = true;
+                page++;
+                loadMoreMatches(page);
+            }
+        }
+    });
+    
+    function loadMoreMatches(pageNum) {
+        $.ajax({
+            url: '{% url "dashboard:api_matches" %}',
+            data: {
+                page: pageNum,
+                filter: '{{ request.GET.filter|default:"" }}',
+                sort: '{{ request.GET.sort|default:"" }}'
+            },
+            success: function(response) {
+                if (response.html) {
+                    $('#matchesGrid').append(response.html);
+                    loading = false;
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

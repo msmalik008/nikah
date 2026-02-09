@@ -1,0 +1,276 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Download App - SoulMate{% endblock %}
+
+{% block extra_css %}
+<style>
+    .app-download-hero {
+        background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+        border-radius: 20px;
+        padding: 4rem 2rem;
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+    
+    .app-feature {
+        text-align: center;
+        padding: 2rem;
+        border-radius: 15px;
+        background: var(--card-bg);
+        margin-bottom: 2rem;
+        transition: transform 0.3s ease;
+    }
+    
+    .app-feature:hover {
+        transform: translateY(-5px);
+    }
+    
+    .app-feature-icon {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background: rgba(156, 39, 176, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+    }
+    
+    .download-btn {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 1rem 2rem;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        margin-bottom: 1rem;
+    }
+    
+    .download-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
+    }
+    
+    .app-store-badge {
+        width: 180px;
+        height: auto;
+    }
+    
+    .phone-mockup {
+        position: relative;
+        width: 300px;
+        margin: 0 auto;
+    }
+    
+    .phone-mockup img {
+        width: 100%;
+        filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3));
+    }
+    
+    .screen-content {
+        position: absolute;
+        top: 8%;
+        left: 6%;
+        right: 6%;
+        bottom: 8%;
+        background: var(--dark-bg);
+        border-radius: 25px;
+        overflow: hidden;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="app-download-hero">
+    <div class="container">
+        <h1 class="display-4 mb-3 text-white">Take SoulMate With You</h1>
+        <p class="lead text-light mb-4">
+            Find matches, chat, and connect wherever you go with our mobile app.
+        </p>
+        
+        <div class="row justify-content-center mt-5">
+            <div class="col-md-6">
+                <div class="phone-mockup">
+                    <img src="https://cdn.pixabay.com/photo/2014/12/16/00/34/smartphone-570331_1280.png" alt="Phone Mockup">
+                    <div class="screen-content">
+                        <!-- App screen preview would go here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- App Features -->
+    <div class="row mb-5">
+        <div class="col-lg-4">
+            <div class="app-feature">
+                <div class="app-feature-icon">
+                    <i class="fas fa-bell fa-2x text-primary"></i>
+                </div>
+                <h4>Instant Notifications</h4>
+                <p class="text-muted">Get real-time alerts for new matches, messages, and likes.</p>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="app-feature">
+                <div class="app-feature-icon">
+                    <i class="fas fa-map-marker-alt fa-2x text-primary"></i>
+                </div>
+                <h4>Location-Based</h4>
+                <p class="text-muted">Find matches near you with our location-aware matching.</p>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="app-feature">
+                <div class="app-feature-icon">
+                    <i class="fas fa-shield-alt fa-2x text-primary"></i>
+                </div>
+                <h4>Secure Chat</h4>
+                <p class="text-muted">End-to-end encrypted messaging for private conversations.</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Download Buttons -->
+    <div class="row justify-content-center mb-5">
+        <div class="col-md-8 text-center">
+            <h2 class="mb-4">Download Now</h2>
+            <p class="text-muted mb-4">Available on both Android and iOS devices</p>
+            
+            <div class="row justify-content-center">
+                <div class="col-md-5 mb-3">
+                    <a href="{{ android_app_url }}" class="download-btn" target="_blank">
+                        <i class="fab fa-google-play fa-3x"></i>
+                        <div class="text-start">
+                            <small>GET IT ON</small>
+                            <div class="h5 mb-0">Google Play</div>
+                        </div>
+                    </a>
+                </div>
+                
+                <div class="col-md-5 mb-3">
+                    <a href="{{ ios_app_url }}" class="download-btn" target="_blank">
+                        <i class="fab fa-apple fa-3x"></i>
+                        <div class="text-start">
+                            <small>Download on the</small>
+                            <div class="h5 mb-0">App Store</div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- QR Code -->
+    <div class="row justify-content-center mb-5">
+        <div class="col-md-6 text-center">
+            <div class="card p-4">
+                <h4 class="mb-3">Scan to Download</h4>
+                <div class="mb-3">
+                    <!-- Placeholder for QR code -->
+                    <div style="width: 200px; height: 200px; background: #f8f9fa; margin: 0 auto; border-radius: 10px;"></div>
+                </div>
+                <p class="text-muted">
+                    Scan this QR code with your phone's camera to download the app.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- System Requirements -->
+    <div class="row mb-5">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title">
+                        <i class="fab fa-android me-2 text-success"></i> Android Requirements
+                    </h4>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Android 8.0 or higher</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> 2GB RAM minimum</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> 100MB free storage</li>
+                        <li><i class="fas fa-check text-success me-2"></i> Internet connection required</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title">
+                        <i class="fab fa-apple me-2"></i> iOS Requirements
+                    </h4>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> iOS 13.0 or higher</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> iPhone 8 or later</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> 150MB free storage</li>
+                        <li><i class="fas fa-check text-success me-2"></i> Internet connection required</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- FAQ -->
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title mb-4">Frequently Asked Questions</h4>
+                    
+                    <div class="accordion" id="faqAccordion">
+                        <div class="accordion-item bg-dark border-secondary">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                    Is the app free to download?
+                                </button>
+                            </h2>
+                            <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body text-muted">
+                                    Yes, the SoulMate app is completely free to download and use. Some premium features may require a subscription.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item bg-dark border-secondary">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                    Can I use the same account on multiple devices?
+                                </button>
+                            </h2>
+                            <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body text-muted">
+                                    Yes, you can use your SoulMate account on both the web version and the mobile app simultaneously.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item bg-dark border-secondary">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                    How do I update the app?
+                                </button>
+                            </h2>
+                            <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body text-muted">
+                                    Updates are automatically handled through the Google Play Store or Apple App Store. Make sure you have auto-updates enabled.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

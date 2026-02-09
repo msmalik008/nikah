@@ -1,0 +1,121 @@
+<!-- accounts/templates/accounts/people_nearby_widget.html -->
+{% load static %}
+
+{% if not enhanced_profiles %}
+<!-- Empty State -->
+<div class="col-12 text-center py-5">
+    <i class="fas fa-users fa-4x mb-3" style="color: var(--text-muted);"></i>
+    <h4>No compatible people found</h4>
+    <p class="text-muted mb-4">Try updating your preferences or check back later</p>
+    <button onclick="loadPeopleNearby()" class="btn btn-primary">
+        <i class="fas fa-redo me-1"></i> Refresh
+    </button>
+</div>
+{% else %}
+<!-- People Grid -->
+{% for data in enhanced_profiles %}
+<div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+    <div class="match-card dashboard-card {{ data.compatibility_class }}">
+        <!-- Compatibility Badge -->
+        <div class="match-percentage">{{ data.compatibility }}%</div>
+        
+        <!-- Active Indicator -->
+        {% if data.is_recently_active %}
+        <div class="position-absolute top-2 start-2">
+            <span class="active-indicator" title="Recently Active"></span>
+        </div>
+        {% endif %}
+        
+        <!-- Profile Image -->
+        <div class="profile-image-container">
+            <img src="{{ data.profile_image|default:'https://via.placeholder.com/300x300/9c27b0/ffffff?text=SM' }}" 
+                 alt="{{ data.user.get_full_name|default:data.user.username }}" 
+                 class="profile-img">
+        </div>
+        
+        <!-- Action Overlay -->
+        <div class="match-overlay">
+            <div class="w-100">
+                <a href="{% url 'accounts:view_profile' data.user.id %}" 
+                   class="btn btn-primary btn-sm w-100 mb-2 view-profile-btn" 
+                   data-user-id="{{ data.user.id }}">
+                    <i class="fas fa-eye me-1"></i> View
+                </a>
+                
+                <a href="{% url 'chat:send_message' data.user.id %}" 
+                   class="btn btn-success btn-sm w-100 mb-2 message-btn" 
+                   data-user-id="{{ data.user.id }}">
+                    <i class="fas fa-envelope me-1"></i> Message
+                </a>
+                
+                <button onclick="sendLike({{ data.user.id }}, this)" 
+                        class="btn {% if not data.already_liked %}btn-danger{% else %}btn-secondary{% endif %} btn-sm w-100 like-btn" 
+                        data-user-id="{{ data.user.id }}"
+                        {% if data.mutual_like %}disabled{% endif %}>
+                    <i class="fas fa-heart me-1"></i>
+                    {% if not data.already_liked %}Like{% else %}Liked{% endif %}
+                    {% if data.mutual_like %} 💖{% endif %}
+                </button>
+            </div>
+        </div>
+        
+        <!-- Profile Info -->
+        <div class="match-info">
+            <div class="text-center">
+                <h6 class="match-name mb-1">
+                    {{ data.user.get_full_name|default:data.user.username }}
+                </h6>
+                <p class="text-muted mb-1">
+                    <i class="fas fa-user me-1"></i>{{ data.age_display }}
+                </p>
+                <p class="text-muted mb-2 small">
+                    <i class="fas fa-map-marker-alt me-1"></i>{{ data.location_text }}
+                </p>
+            </div>
+            
+            <!-- Additional Info -->
+            <div class="profile-details mt-2">
+                {% if data.sect %}
+                <span class="badge bg-dark mb-1"><i class="fas fa-pray me-1"></i>{{ data.sect }}</span>
+                {% endif %}
+                
+                {% if data.education %}
+                <span class="badge bg-secondary mb-1"><i class="fas fa-graduation-cap me-1"></i>{{ data.education }}</span>
+                {% endif %}
+                
+                {% if data.practice_level %}
+                <span class="badge bg-info mb-1"><i class="fas fa-star me-1"></i>{{ data.practice_level }}</span>
+                {% endif %}
+                
+                {% if data.bio_preview %}
+                <p class="small text-muted mt-2 mb-0">{{ data.bio_preview }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Compatibility Bar -->
+            <div class="compatibility-bar mt-3">
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar" 
+                         style="width: {{ data.compatibility }}%;
+                                background: linear-gradient(90deg, 
+                                var(--primary-color), 
+                                var(--accent-color));">
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between mt-1">
+                    <small class="text-muted">Compatibility</small>
+                    <small class="text-muted">Match</small>
+                </div>
+            </div>
+            
+            <!-- Mutual Like Indicator -->
+            {% if data.mutual_like %}
+            <div class="mutual-like-badge mt-2">
+                <span class="badge bg-success"><i class="fas fa-heart me-1"></i> Mutual Interest</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endif %}

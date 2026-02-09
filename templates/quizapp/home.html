@@ -1,0 +1,363 @@
+{% extends 'quizapp/base.html' %}
+
+{% block title %}Modern Match - Find Your Perfect Partner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section {
+        background: linear-gradient(rgba(111, 66, 193, 0.9), rgba(253, 126, 20, 0.8)), url('https://images.unsplash.com/photo-1519741497674-611481863552?ixlib=rb-4.0.3&auto=format&fit=crop&w=1950&q=80');
+        background-size: cover;
+        background-position: center;
+        color: white;
+        padding: 100px 0;
+        border-radius: 0 0 40px 40px;
+        margin-bottom: 80px;
+    }
+    
+    .feature-card {
+        border: none;
+        height: 100%;
+        transition: all 0.3s ease;
+    }
+    
+    .feature-icon {
+        width: 70px;
+        height: 70px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+    
+    .stats-counter {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(to right, var(--primary), var(--secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .testimonial-card {
+        border-left: 4px solid var(--primary);
+        padding-left: 20px;
+    }
+    
+    .how-it-works-step {
+        position: relative;
+        padding-left: 70px;
+        margin-bottom: 40px;
+    }
+    
+    .step-number {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 50px;
+        height: 50px;
+        background: var(--primary);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">Find Your Perfect Match Today</h1>
+                <p class="lead mb-4">
+                    ModernMatch connects you with compatible partners based on shared values, interests, and goals. 
+                    Start your journey to meaningful relationships.
+                </p>
+                <div class="d-flex flex-wrap gap-3">
+                    {% if not user.is_authenticated %}
+                    <a href="{% url 'quiz_step' step='age' %}" class="btn btn-light btn-lg px-4 py-3">
+                        <i class="bi bi-heart-fill me-2"></i>Start Free Matching
+                    </a>
+                    <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg px-4 py-3">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Login
+                    </a>
+                    {% else %}
+                    <a href="{% url 'dashboard:dashboard' %}" class="btn btn-light btn-lg px-4 py-3">
+                        <i class="bi bi-speedometer2 me-2"></i>Go to Dashboard
+                    </a>
+                    <a href="{% url 'dashboard:dashboard'%}?tab=discover" class="btn btn-outline-light btn-lg px-4 py-3">
+                        <i class="bi bi-compass me-2"></i>Discover Matches
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-lg-6 d-none d-lg-block">
+                <div class="text-center">
+                    <img src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" 
+                         class="img-fluid rounded-xxl shadow-lg" 
+                         alt="Happy Couple"
+                         style="transform: perspective(1000px) rotateY(-15deg);">
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-3 col-6">
+                <div class="text-center">
+                    <div class="stats-counter mb-2">{{ total_users|default:"5000" }}+</div>
+                    <p class="text-muted mb-0">Active Members</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="text-center">
+                    <div class="stats-counter mb-2">{{ success_stories|default:"1200" }}+</div>
+                    <p class="text-muted mb-0">Success Stories</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="text-center">
+                    <div class="stats-counter mb-2">98%</div>
+                    <p class="text-muted mb-0">Satisfaction Rate</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="text-center">
+                    <div class="stats-counter mb-2">24/7</div>
+                    <p class="text-muted mb-0">Support Available</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold mb-3">How ModernMatch Works</h2>
+            <p class="text-muted lead">Find your perfect match in just a few simple steps</p>
+        </div>
+        
+        <div class="row">
+            <div class="col-lg-10 mx-auto">
+                <div class="how-it-works-step">
+                    <div class="step-number">1</div>
+                    <h4>Complete Your Profile</h4>
+                    <p class="text-muted">Share your interests, values, and preferences through our guided questionnaire.</p>
+                </div>
+                
+                <div class="how-it-works-step">
+                    <div class="step-number">2</div>
+                    <h4>Smart Matching</h4>
+                    <p class="text-muted">Our advanced algorithm finds compatible matches based on your profile and preferences.</p>
+                </div>
+                
+                <div class="how-it-works-step">
+                    <div class="step-number">3</div>
+                    <h4>Connect & Chat</h4>
+                    <p class="text-muted">Start meaningful conversations with your matches in a safe and secure environment.</p>
+                </div>
+                
+                <div class="how-it-works-step">
+                    <div class="step-number">4</div>
+                    <h4>Meet & Build</h4>
+                    <p class="text-muted">Take your connection to the next level with video calls and in-person meetings.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold mb-3">Why Choose ModernMatch?</h2>
+            <p class="text-muted lead">Designed for meaningful connections</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card feature-card shadow-soft border-0 rounded-xl p-4 card-hover">
+                    <div class="feature-icon mx-auto">
+                        <i class="bi bi-shield-check text-white fs-3"></i>
+                    </div>
+                    <div class="card-body text-center">
+                        <h5 class="card-title fw-bold">Verified Profiles</h5>
+                        <p class="card-text text-muted">
+                            All profiles are verified to ensure authenticity and create a safe environment for everyone.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card feature-card shadow-soft border-0 rounded-xl p-4 card-hover">
+                    <div class="feature-icon mx-auto">
+                        <i class="bi bi-cpu text-white fs-3"></i>
+                    </div>
+                    <div class="card-body text-center">
+                        <h5 class="card-title fw-bold">Smart Matching</h5>
+                        <p class="card-text text-muted">
+                            Advanced compatibility algorithm connects you with partners who share your values and goals.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card feature-card shadow-soft border-0 rounded-xl p-4 card-hover">
+                    <div class="feature-icon mx-auto">
+                        <i class="bi bi-chat-dots text-white fs-3"></i>
+                    </div>
+                    <div class="card-body text-center">
+                        <h5 class="card-title fw-bold">Secure Chat</h5>
+                        <p class="card-text text-muted">
+                            Built-in messaging with end-to-end encryption ensures private and secure communication.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card feature-card shadow-soft border-0 rounded-xl p-4 card-hover">
+                    <div class="feature-icon mx-auto">
+                        <i class="bi bi-calendar-check text-white fs-3"></i>
+                    </div>
+                    <div class="card-body text-center">
+                        <h5 class="card-title fw-bold">Video Dates</h5>
+                        <p class="card-text text-muted">
+                            Virtual date feature lets you connect face-to-face before meeting in person.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card feature-card shadow-soft border-0 rounded-xl p-4 card-hover">
+                    <div class="feature-icon mx-auto">
+                        <i class="bi bi-graph-up text-white fs-3"></i>
+                    </div>
+                    <div class="card-body text-center">
+                        <h5 class="card-title fw-bold">Compatibility Insights</h5>
+                        <p class="card-text text-muted">
+                            Get detailed compatibility reports to understand your connection better.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card feature-card shadow-soft border-0 rounded-xl p-4 card-hover">
+                    <div class="feature-icon mx-auto">
+                        <i class="bi bi-people text-white fs-3"></i>
+                    </div>
+                    <div class="card-body text-center">
+                        <h5 class="card-title fw-bold">Community Support</h5>
+                        <p class="card-text text-muted">
+                            Join discussion forums and get advice from relationship experts and community members.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold mb-3">Success Stories</h2>
+            <p class="text-muted lead">Real people, real connections, real happiness</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="testimonial-card">
+                    <p class="fst-italic mb-3">"ModernMatch helped me find someone who truly understands me. We're getting married next month!"</p>
+                    <div class="d-flex align-items-center">
+                        <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" 
+                             class="rounded-circle me-3" 
+                             width="50" 
+                             height="50"
+                             alt="Sarah">
+                        <div>
+                            <h6 class="mb-0">Sarah & Ahmed</h6>
+                            <small class="text-muted">Matched in 2024</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="testimonial-card">
+                    <p class="fst-italic mb-3">"The compatibility matching is amazing. We had so much in common from the start."</p>
+                    <div class="d-flex align-items-center">
+                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" 
+                             class="rounded-circle me-3" 
+                             width="50" 
+                             height="50"
+                             alt="Michael">
+                        <div>
+                            <h6 class="mb-0">Michael & Fatima</h6>
+                            <small class="text-muted">Matched in 2025</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="testimonial-card">
+                    <p class="fst-italic mb-3">"I was skeptical at first, but the detailed profiles and secure chat made all the difference."</p>
+                    <div class="d-flex align-items-center">
+                        <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" 
+                             class="rounded-circle me-3" 
+                             width="50" 
+                             height="50"
+                             alt="Jennifer">
+                        <div>
+                            <h6 class="mb-0">Jennifer & Omar</h6>
+                            <small class="text-muted">Matched in 2024</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-5 gradient-bg text-white">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h2 class="fw-bold mb-3">Ready to Find Your Perfect Match?</h2>
+                <p class="mb-4">Join thousands of successful couples who found love through ModernMatch.</p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                {% if not user.is_authenticated %}
+                <a href="{% url 'quiz_step' step='age' %}" class="btn btn-light btn-lg px-5 py-3">
+                    <i class="bi bi-heart-fill me-2"></i>Start Free Today
+                </a>
+                {% else %}
+                <a href="{% url 'dashboard:dashboard'%}?tab=discover" class="btn btn-light btn-lg px-5 py-3">
+                    <i class="bi bi-compass me-2"></i>Discover Matches
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

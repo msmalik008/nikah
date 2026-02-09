@@ -1,0 +1,485 @@
+<!-- dashboard/templates/dashboard/messages.html -->
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block dashboard_content %}
+<div class="row g-0">
+    <!-- Conversations List -->
+    <div class="col-lg-4 col-xl-3">
+        <div class="dashboard-card h-100 rounded-start" style="border-radius: 15px 0 0 15px;">
+            <div class="dashboard-card-header">
+                <h2 class="dashboard-card-title">Messages</h2>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newMessageModal">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+            
+            <!-- Search Conversations -->
+            <div class="mb-3">
+                <input type="text" class="form-control" placeholder="Search conversations..." 
+                       id="searchConversations">
+            </div>
+            
+            <!-- Conversation List -->
+            <div class="conversation-list" style="max-height: 600px; overflow-y: auto;">
+                {% for conversation in conversations %}
+                <a href="{% url 'dashboard:conversation' conversation.id %}" 
+                   class="message-preview {% if conversation.id == active_conversation.id %}active{% endif %} {% if not conversation.is_read %}unread{% endif %}">
+                    <div class="d-flex align-items-center">
+                        <!-- Avatar with Online Status -->
+                        <div class="position-relative me-3">
+                            <img src="{{ conversation.user.profile_image.url|default:'https://via.placeholder.com/45/9c27b0/ffffff' }}" 
+                                 alt="{{ conversation.user.name }}" 
+                                 class="rounded-circle" style="width: 45px; height: 45px; object-fit: cover;">
+                            {% if conversation.user.is_online %}
+                            <span class="position-absolute bottom-0 end-0 p-1 bg-success border border-2 border-dark rounded-circle">
+                                <span class="visually-hidden">Online</span>
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Conversation Info -->
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">{{ conversation.user.name }}</h6>
+                                <small class="text-muted">{{ conversation.last_message_time|timesince }}</small>
+                            </div>
+                            <p class="text-muted mb-0 text-truncate">
+                                {% if conversation.last_message_sender == user %}
+                                <i class="fas fa-reply me-1"></i>
+                                {% endif %}
+                                {{ conversation.last_message|truncatechars:40 }}
+                            </p>
+                        </div>
+                        
+                        <!-- Unread Count -->
+                        {% if conversation.unread_count > 0 %}
+                        <span class="badge bg-primary rounded-pill ms-2">{{ conversation.unread_count }}</span>
+                        {% endif %}
+                    </div>
+                </a>
+                {% empty %}
+                <div class="text-center py-5">
+                    <i class="fas fa-comments fa-3x mb-3" style="color: var(--text-muted);"></i>
+                    <h4>No conversations yet</h4>
+                    <p class="text-muted">Start messaging your matches!</p>
+                    <a href="{% url 'dashboard:matches' %}" class="btn btn-primary">
+                        <i class="fas fa-heart me-1"></i> View Matches
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Active Conversation -->
+    <div class="col-lg-8 col-xl-9">
+        <div class="dashboard-card h-100 rounded-end" style="border-radius: 0 15px 15px 0;">
+            {% if active_conversation %}
+            <!-- Conversation Header -->
+            <div class="dashboard-card-header">
+                <div class="d-flex align-items-center">
+                    <div class="position-relative me-3">
+                        <img src="{{ active_conversation.user.profile_image.url|default:'https://via.placeholder.com/45/9c27b0/ffffff' }}" 
+                             alt="{{ active_conversation.user.name }}" 
+                             class="rounded-circle" style="width: 45px; height: 45px; object-fit: cover;">
+                        {% if active_conversation.user.is_online %}
+                        <span class="position-absolute bottom-0 end-0 p-1 bg-success border border-2 border-dark rounded-circle"></span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h5 class="mb-0">{{ active_conversation.user.name }}</h5>
+                        <small class="text-muted">
+                            {% if active_conversation.user.is_online %}
+                            <span class="text-success">● Online</span>
+                            {% else %}
+                            Last seen {{ active_conversation.user.last_seen|timesince }} ago
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" 
+                            data-bs-target="#userProfileModal" data-user-id="{{ active_conversation.user.id }}">
+                        <i class="fas fa-user"></i>
+                    </button>
+                    <button class="btn btn-outline-light btn-sm" onclick="startVideoCall({{ active_conversation.user.id }})">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button class="btn btn-outline-light btn-sm" onclick="blockUser({{ active_conversation.user.id }})">
+                        <i class="fas fa-ban"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Messages Container -->
+            <div class="messages-container p-3" id="messagesContainer" 
+                 style="height: 500px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 10px;">
+                {% for message in messages %}
+                <div class="message-wrapper mb-3 {% if message.sender == user %}text-end{% endif %}">
+                    <div class="message-bubble d-inline-block {% if message.sender == user %}bg-primary{% else %}bg-dark{% endif %} 
+                                p-3 rounded-3" style="max-width: 70%;">
+                        {% if message.sender != user %}
+                        <small class="d-block text-muted mb-1">{{ message.sender.name }}</small>
+                        {% endif %}
+                        
+                        <p class="mb-1">{{ message.content }}</p>
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <small class="text-muted">
+                                {{ message.timestamp|date:"g:i A" }}
+                            </small>
+                            {% if message.sender == user %}
+                            <small class="ms-2">
+                                {% if message.is_read %}
+                                <i class="fas fa-check-double text-info" data-bs-toggle="tooltip" title="Read"></i>
+                                {% else %}
+                                <i class="fas fa-check text-muted" data-bs-toggle="tooltip" title="Sent"></i>
+                                {% endif %}
+                            </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-5">
+                    <i class="fas fa-comment-slash fa-3x mb-3" style="color: var(--text-muted);"></i>
+                    <h4>No messages yet</h4>
+                    <p class="text-muted">Send a message to start the conversation!</p>
+                </div>
+                {% endfor %}
+                
+                <!-- Typing Indicator -->
+                <div id="typingIndicator" class="text-start mb-3" style="display: none;">
+                    <div class="message-bubble bg-dark p-3 rounded-3 d-inline-block">
+                        <div class="typing">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Message Input -->
+            <div class="message-input p-3">
+                <form id="messageForm" method="POST" action="{% url 'dashboard:send_message_api' active_conversation.user.id %}">
+                    {% csrf_token %}
+                    <div class="input-group">
+                        <button type="button" class="btn btn-outline-light" onclick="toggleEmojiPicker()">
+                            <i class="far fa-smile"></i>
+                        </button>
+                        <input type="text" class="form-control" id="messageInput" 
+                               placeholder="Type your message..." required autocomplete="off">
+                        <button type="button" class="btn btn-outline-light" onclick="attachFile()">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Quick Replies -->
+                <div class="quick-replies mt-2">
+                    <small class="text-muted d-block mb-1">Quick replies:</small>
+                    <div class="d-flex gap-1 flex-wrap">
+                        <button class="btn btn-sm btn-outline-light" onclick="quickReply('Hello! 👋')">
+                            Hello! 👋
+                        </button>
+                        <button class="btn btn-sm btn-outline-light" onclick="quickReply('How are you?')">
+                            How are you?
+                        </button>
+                        <button class="btn btn-sm btn-outline-light" onclick="quickReply('Would you like to chat?')">
+                            Chat?
+                        </button>
+                        <button class="btn btn-sm btn-outline-light" onclick="quickReply('😊')">
+                            😊
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <!-- No Conversation Selected -->
+            <div class="h-100 d-flex flex-column align-items-center justify-content-center text-center p-5">
+                <i class="fas fa-comments fa-4x mb-3" style="color: var(--text-muted);"></i>
+                <h3>Select a conversation</h3>
+                <p class="text-muted">Choose a conversation from the list to start messaging</p>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newMessageModal">
+                    <i class="fas fa-plus me-1"></i> Start New Conversation
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- New Message Modal -->
+<div class="modal fade" id="newMessageModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">New Message</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="newMessageForm">
+                    <div class="mb-3">
+                        <label class="form-label">To</label>
+                        <select class="form-select" id="recipientSelect" required>
+                            <option value="">Select a match...</option>
+                            {% for match in available_matches %}
+                            <option value="{{ match.id }}">{{ match.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Message</label>
+                        <textarea class="form-control" id="newMessageText" rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="sendNewMessage()">Send Message</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.message-bubble {
+    position: relative;
+    word-wrap: break-word;
+}
+
+.message-bubble.bg-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)) !important;
+}
+
+.messages-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.messages-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 3px;
+}
+
+.typing {
+    display: inline-block;
+    width: 60px;
+}
+
+.typing span {
+    height: 8px;
+    width: 8px;
+    float: left;
+    margin: 0 1px;
+    background-color: var(--text-muted);
+    display: block;
+    border-radius: 50%;
+    opacity: 0.4;
+}
+
+.typing span:nth-of-type(1) {
+    animation: 1s blink infinite 0.3333s;
+}
+
+.typing span:nth-of-type(2) {
+    animation: 1s blink infinite 0.6666s;
+}
+
+.typing span:nth-of-type(3) {
+    animation: 1s blink infinite 0.9999s;
+}
+
+@keyframes blink {
+    50% {
+        opacity: 1;
+    }
+}
+
+.message-preview.active {
+    background: rgba(156, 39, 176, 0.2) !important;
+    border-left: 3px solid var(--primary-color);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// WebSocket for real-time messaging
+let chatSocket = null;
+
+$(document).ready(function() {
+    {% if active_conversation %}
+    // Connect to WebSocket
+    connectWebSocket();
+    
+    // Scroll to bottom of messages
+    scrollToBottom();
+    {% endif %}
+    
+    // Search conversations
+    $('#searchConversations').on('keyup', function() {
+        const search = $(this).val().toLowerCase();
+        $('.message-preview').each(function() {
+            const name = $(this).find('h6').text().toLowerCase();
+            if (name.includes(search)) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    });
+});
+
+function connectWebSocket() {
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const wsPath = `${wsScheme}://${window.location.host}/ws/chat/${% if active_conversation %}{{ active_conversation.user.id }}{% else %}0{% endif %}/`;
+    
+    chatSocket = new WebSocket(wsPath);
+    
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        
+        if (data.type === 'message') {
+            addMessage(data.message, false);
+        } else if (data.type === 'typing') {
+            showTypingIndicator(data.user_id);
+        } else if (data.type === 'read_receipt') {
+            updateReadReceipt(data.message_id);
+        }
+    };
+    
+    chatSocket.onclose = function(e) {
+        console.error('Chat socket closed unexpectedly');
+        setTimeout(function() {
+            connectWebSocket();
+        }, 1000);
+    };
+}
+
+function sendMessage() {
+    const messageInput = $('#messageInput');
+    const message = messageInput.val().trim();
+    
+    if (message) {
+        if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.send(JSON.stringify({
+                'message': message,
+                'conversation_id': {{ active_conversation.id|default:0 }}
+            }));
+        }
+        
+        // Add message to UI immediately
+        addMessage({
+            content: message,
+            sender: '{{ user.username }}',
+            timestamp: new Date().toISOString()
+        }, true);
+        
+        messageInput.val('');
+        scrollToBottom();
+    }
+}
+
+function addMessage(message, isOwn) {
+    const messagesContainer = $('#messagesContainer');
+    const messageWrapper = $('<div class="message-wrapper mb-3"></div>')
+        .addClass(isOwn ? 'text-end' : 'text-start');
+    
+    const messageBubble = $('<div class="message-bubble d-inline-block p-3 rounded-3"></div>')
+        .addClass(isOwn ? 'bg-primary' : 'bg-dark')
+        .css('max-width', '70%');
+    
+    if (!isOwn) {
+        $('<small class="d-block text-muted mb-1"></small>')
+            .text(message.sender)
+            .appendTo(messageBubble);
+    }
+    
+    $('<p class="mb-1"></p>')
+        .text(message.content)
+        .appendTo(messageBubble);
+    
+    const timeInfo = $('<div class="d-flex justify-content-between align-items-center mt-2"></div>');
+    
+    $('<small class="text-muted"></small>')
+        .text(new Date(message.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}))
+        .appendTo(timeInfo);
+    
+    if (isOwn) {
+        $('<small class="ms-2"></small>')
+            .html('<i class="fas fa-check text-muted" data-bs-toggle="tooltip" title="Sent"></i>')
+            .appendTo(timeInfo);
+    }
+    
+    timeInfo.appendTo(messageBubble);
+    messageBubble.appendTo(messageWrapper);
+    messageWrapper.appendTo(messagesContainer);
+    
+    scrollToBottom();
+}
+
+function scrollToBottom() {
+    const container = $('#messagesContainer');
+    container.scrollTop(container[0].scrollHeight);
+}
+
+function quickReply(text) {
+    $('#messageInput').val(text);
+    $('#messageInput').focus();
+}
+
+function toggleEmojiPicker() {
+    // Implement emoji picker
+    console.log('Emoji picker toggled');
+}
+
+function attachFile() {
+    // Implement file attachment
+    const input = $('<input type="file" style="display: none;">');
+    input.on('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            // Handle file upload
+            console.log('File selected:', file.name);
+        }
+    });
+    input.click();
+}
+
+function sendNewMessage() {
+    const recipientId = $('#recipientSelect').val();
+    const message = $('#newMessageText').val();
+    
+    if (recipientId && message) {
+        $.ajax({
+            url: '{% url "dashboard:send_message_api" 0 %}'.replace('0', recipientId),
+            type: 'POST',
+            data: {
+                message: message,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#newMessageModal').modal('hide');
+                    window.location.href = `/dashboard/messages/${response.conversation_id}/`;
+                }
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

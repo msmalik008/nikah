@@ -1,0 +1,453 @@
+{% extends 'quizapp/base.html' %}
+
+{% block title %}{{ viewed_user.get_full_name|default:viewed_user.username }} - Modern Match{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-header {
+        background: linear-gradient(rgba(111, 66, 193, 0.1), rgba(253, 126, 20, 0.1));
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .compatibility-badge {
+        background: linear-gradient(to right, var(--primary), var(--secondary));
+        color: white;
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-weight: 600;
+        display: inline-block;
+    }
+    
+    .action-buttons .btn {
+        min-width: 120px;
+    }
+    
+    .mutual-friend-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid white;
+        margin-left: -10px;
+    }
+    
+    .mutual-friend-avatar:first-child {
+        margin-left: 0;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border: 1px solid var(--border-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Back Button -->
+    <div class="mb-4">
+        <a href="{% url 'dashboard:dashboard'%}?tab=discover" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left me-2"></i>Back to Discover
+        </a>
+    </div>
+    
+    <!-- Profile Header -->
+    <div class="profile-header">
+        <div class="row align-items-center">
+            <div class="col-md-3 text-center">
+                {% if viewed_profile.profile_pic %}
+                <img src="{{ viewed_profile.profile_pic.url }}" 
+                     class="img-fluid rounded-circle border" 
+                     style="width: 200px; height: 200px; object-fit: cover;"
+                     alt="{{ viewed_user.username }}">
+                {% else %}
+                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center mx-auto" 
+                     style="width: 200px; height: 200px;">
+                    <span class="text-white fs-1">{{ viewed_user.username|first|upper }}</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6">
+                <h1 class="fw-bold mb-2">{{ viewed_user.get_full_name|default:viewed_user.username }}</h1>
+                <div class="d-flex align-items-center mb-3">
+                    <span class="badge bg-light text-dark me-2">
+                        <i class="bi bi-person me-1"></i>{{ viewed_profile.age }} years
+                    </span>
+                    <span class="badge bg-light text-dark me-2">
+                        <i class="bi bi-geo-alt me-1"></i>{{ viewed_profile.city }}, {{ viewed_profile.country }}
+                    </span>
+                    {% if viewed_profile.sect %}
+                    <span class="badge bg-light text-dark">
+                        <i class="bi bi-star me-1"></i>{{ viewed_profile.sect }}
+                    </span>
+                    {% endif %}
+                </div>
+                
+                <!-- Compatibility Score -->
+                {% if compatibility_score > 0 %}
+                <div class="mb-3">
+                    <span class="compatibility-badge">
+                        <i class="bi bi-heart-fill me-2"></i>{{ compatibility_score }}% Compatible
+                    </span>
+                </div>
+                {% endif %}
+                
+                <!-- Mutual Friends -->
+                {% if mutual_friends %}
+                <div class="d-flex align-items-center mb-3">
+                    <div class="d-flex me-3">
+                        {% for friend in mutual_friends %}
+                        {% if forloop.counter <= 3 %}
+                        <div class="position-relative">
+                            {% if friend.profile.profile_pic %}
+                            <img src="{{ friend.profile.profile_pic.url }}" 
+                                 class="mutual-friend-avatar"
+                                 alt="{{ friend.username }}"
+                                 data-bs-toggle="tooltip" 
+                                 data-bs-placement="top" 
+                                 title="{{ friend.username }}">
+                            {% else %}
+                            <div class="mutual-friend-avatar bg-primary text-white d-flex align-items-center justify-content-center"
+                                 data-bs-toggle="tooltip" 
+                                 data-bs-placement="top" 
+                                 title="{{ friend.username }}">
+                                {{ friend.username|first|upper }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                        {% if mutual_friends|length > 3 %}
+                        <div class="mutual-friend-avatar bg-secondary text-white d-flex align-items-center justify-content-center"
+                             data-bs-toggle="tooltip" 
+                             data-bs-placement="top" 
+                             title="{{ mutual_friends|length|add:'-3' }} more">
+                            +{{ mutual_friends|length|add:"-3" }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">{{ mutual_friends|length }} mutual friends</small>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-3">
+                <div class="action-buttons">
+                    <!-- Friend Request/Action Buttons -->
+                    {% if friendship_relationship %}
+                        <!-- Using new friendship system -->
+                        {% if friendship_relationship.status == 'strangers' %}
+                        <form method="post" action="{% url 'friendship:send_friend_request' viewed_user.id %}" class="mb-2">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-person-plus me-2"></i>Add Friend
+                            </button>
+                        </form>
+                        
+                        <button class="btn btn-outline-primary w-100 mb-2" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#messageModal">
+                            <i class="bi bi-chat-dots me-2"></i>Message
+                        </button>
+                        
+                        {% elif friendship_relationship.status == 'pending_sender' %}
+                        <button class="btn btn-secondary w-100 mb-2" disabled>
+                            <i class="bi bi-clock me-2"></i>Request Sent
+                        </button>
+                        
+                        <form method="post" action="{% url 'friendship:cancel_friend_request' viewed_user.id %}" class="mb-2">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger w-100">
+                                <i class="bi bi-x-circle me-2"></i>Cancel Request
+                            </button>
+                        </form>
+                        
+                        {% elif friendship_relationship.status == 'pending_receiver' %}
+                        <form method="post" action="{% url 'friendship:accept_friend_request' viewed_user.id %}" class="mb-2">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="bi bi-check-circle me-2"></i>Accept Request
+                            </button>
+                        </form>
+                        
+                        <form method="post" action="{% url 'friendship:reject_friend_request' viewed_user.id %}" class="mb-2">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger w-100">
+                                <i class="bi bi-x-circle me-2"></i>Reject Request
+                            </button>
+                        </form>
+                        
+                        {% elif friendship_relationship.status == 'friends' %}
+                        <button class="btn btn-outline-primary w-100 mb-2" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#messageModal">
+                            <i class="bi bi-chat-dots me-2"></i>Message
+                        </button>
+                        
+                        <form method="post" action="{% url 'friendship:remove_friend' viewed_user.id %}" 
+                            onsubmit="return confirm('Are you sure you want to remove this friend?');" 
+                            class="mb-2">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger w-100">
+                                <i class="bi bi-person-dash me-2"></i>Remove Friend
+                            </button>
+                        </form>
+                        
+                        {% elif friendship_relationship.status == 'blocked_by_a' %}
+                        <form method="post" action="{% url 'friendship:unblock_user' viewed_user.id %}" class="mb-2">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="bi bi-unlock me-2"></i>Unblock
+                            </button>
+                        </form>
+                        
+                        {% elif friendship_relationship.status == 'blocked_by_b' %}
+                        <button class="btn btn-danger w-100 mb-2" disabled>
+                            <i class="bi bi-slash-circle me-2"></i>You Are Blocked
+                        </button>
+                        
+                        {% elif friendship_relationship.status == 'rejected_by_a' %}
+                        <button class="btn btn-warning w-100 mb-2" disabled>
+                            <i class="bi bi-slash-circle me-2"></i>You Rejected
+                        </button>
+                        <form method="post" action="{% url 'friendship:withdraw_rejection' viewed_user.id %}" class="mb-2">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-warning w-100">
+                                <i class="bi bi-arrow-counterclockwise me-2"></i>Withdraw Rejection
+                            </button>
+                        </form>
+                        
+                        {% elif friendship_relationship.status == 'rejected_by_b' %}
+                        <button class="btn btn-danger w-100 mb-2" disabled>
+                            <i class="bi bi-x-circle me-2"></i>They Rejected You
+                        </button>
+                        
+                        {% elif friendship_relationship.status in 'unfriended_by_a,unfriended_by_b' %}
+                        <form method="post" action="{% url 'friendship:send_friend_request' viewed_user.id %}" class="mb-2">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-person-plus me-2"></i>Add Friend Again
+                            </button>
+                        </form>
+                        {% endif %}
+                    
+                    {% else %}
+                        <!-- No relationship exists -->
+                        <form method="post" action="{% url 'friendship:send_friend_request' viewed_user.id %}" class="mb-2">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-person-plus me-2"></i>Add Friend
+                            </button>
+                        </form>
+                        
+                        <button class="btn btn-outline-primary w-100 mb-2" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#messageModal">
+                            <i class="bi bi-chat-dots me-2"></i>Message
+                        </button>
+                    {% endif %}
+                    
+                    <!-- Block Button (if not already blocked) -->
+                    {% if not friendship_relationship or friendship_relationship.status not in 'blocked_by_a,blocked_by_b' %}
+                        {% if friendship_relationship and friendship_relationship.status != 'friends' %}
+                        <form method="post" action="{% url 'friendship:block_user' viewed_user.id %}" 
+                            onsubmit="return confirm('Are you sure you want to block {{ viewed_user.username }}?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger w-100">
+                                <i class="bi bi-slash-circle me-2"></i>Block User
+                            </button>
+                        </form>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Profile Details -->
+    <div class="row">
+        <div class="col-md-8">
+            <!-- About Section -->
+            <div class="info-card">
+                <h4 class="fw-bold mb-3">
+                    <i class="bi bi-person-circle me-2 text-primary"></i>About
+                </h4>
+                <p>{{ viewed_profile.bio|default:"No bio available" }}</p>
+            </div>
+            
+            <!-- Looking For -->
+            <div class="info-card">
+                <h4 class="fw-bold mb-3">
+                    <i class="bi bi-search me-2 text-primary"></i>Looking For
+                </h4>
+                <p>{{ viewed_profile.seeking|default:"Not specified" }}</p>
+            </div>
+            
+            <!-- Details -->
+            <div class="info-card">
+                <h4 class="fw-bold mb-3">
+                    <i class="bi bi-info-circle me-2 text-primary"></i>Details
+                </h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Age</th>
+                                <td>{{ viewed_profile.age }}</td>
+                            </tr>
+                            <tr>
+                                <th>Gender</th>
+                                <td>{{ viewed_profile.get_gender_display }}</td>
+                            </tr>
+                            <tr>
+                                <th>Height</th>
+                                <td>{{ viewed_profile.height_cm|default:"Not specified" }} cm</td>
+                            </tr>
+                            <tr>
+                                <th>Sect</th>
+                                <td>{{ viewed_profile.sect|default:"Not specified" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Education</th>
+                                <td>{{ viewed_profile.education|default:"Not specified" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Occupation</th>
+                                <td>{{ viewed_profile.occupation|default:"Not specified" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Practice Level</th>
+                                <td>{{ viewed_profile.practice_level|default:"Not specified" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Location</th>
+                                <td>{{ viewed_profile.city }}, {{ viewed_profile.country }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Interests -->
+            {% if viewed_profile.preferences %}
+            <div class="info-card">
+                <h4 class="fw-bold mb-3">
+                    <i class="bi bi-heart me-2 text-primary"></i>Interests
+                </h4>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for pref in viewed_profile.preferences %}
+                    <span class="badge bg-primary">{{ pref }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Quick Actions -->
+            <div class="info-card">
+                <h4 class="fw-bold mb-3">
+                    <i class="bi bi-lightning me-2 text-primary"></i>Quick Actions
+                </h4>
+                <div class="d-grid gap-2">
+                    {% if are_friends %}
+                    <a href="{% url 'chat' %}?with={{ viewed_user.id }}" class="btn btn-primary">
+                        <i class="bi bi-chat-dots me-2"></i>Start Chat
+                    </a>
+                    {% else %}
+                    <button class="btn btn-primary" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#messageModal"
+                            {% if not are_friends and friendship_status != 'request_received' %}disabled{% endif %}>
+                        <i class="bi bi-chat-dots me-2"></i>Send Message
+                    </button>
+                    {% endif %}
+                    
+                    <button class="btn btn-outline-primary">
+                        <i class="bi bi-share me-2"></i>Share Profile
+                    </button>
+                    
+                    <button class="btn btn-outline-danger" 
+                            onclick="reportProfile({{ viewed_user.id }})">
+                        <i class="bi bi-flag me-2"></i>Report Profile
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Similar Profiles -->
+            <div class="info-card">
+                <h4 class="fw-bold mb-3">
+                    <i class="bi bi-people me-2 text-primary"></i>Similar Profiles
+                </h4>
+                <div class="list-group list-group-flush">
+                    <!-- This would be populated with similar profiles -->
+                    <div class="list-group-item border-0 px-0">
+                        <small class="text-muted">No similar profiles found.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Message Modal -->
+<div class="modal fade" id="messageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Send Message to {{ viewed_user.username }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'send_message' viewed_user.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        {{ message_form.content }}
+                        <small class="text-muted">You can only message friends or mutual matches.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Send Message</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function reportProfile(userId) {
+        const reason = prompt("Please enter the reason for reporting this profile:");
+        if (reason) {
+            // AJAX call to report profile
+            $.ajax({
+                url: `/api/report-profile/${userId}/`,
+                method: 'POST',
+                data: {reason: reason},
+                headers: {'X-CSRFToken': '{{ csrf_token }}'},
+                success: function(data) {
+                    alert('Profile reported successfully. Thank you for helping keep our community safe.');
+                },
+                error: function() {
+                    alert('Error reporting profile. Please try again.');
+                }
+            });
+        }
+    }
+    
+    // Initialize tooltips
+    $(function () {
+        $('[data-bs-toggle="tooltip"]').tooltip();
+    });
+</script>
+{% endblock %}

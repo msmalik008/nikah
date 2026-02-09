@@ -1,0 +1,444 @@
+<!-- dashboard/templates/dashboard/notifications.html -->
+{% extends 'dashboard/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block extra_css %}
+<style>
+.notification-item {
+    padding: 15px;
+    border-bottom: 1px solid #e0e0e0;
+    transition: background-color 0.2s;
+}
+
+.notification-item:hover {
+    background-color: #f8f9fa;
+}
+
+.notification-item.unread {
+    background-color: #e3f2fd;
+}
+
+.notification-avatar {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+}
+
+.notification-type {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+}
+
+.notification-type.like {
+    background-color: #dc3545;
+}
+
+.notification-type.match {
+    background-color: #28a745;
+}
+
+.notification-type.message {
+    background-color: #007bff;
+}
+
+.notification-type.friend {
+    background-color: #ffc107;
+}
+
+.notification-type.view {
+    background-color: #17a2b8;
+}
+
+.filter-badge {
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.filter-badge.active {
+    background-color: #007bff !important;
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Notifications</h1>
+    <div class="btn-group">
+        <button class="btn btn-outline-primary btn-sm" id="markAllReadBtn">
+            <i class="fas fa-check-double"></i> Mark All as Read
+        </button>
+        <button class="btn btn-outline-danger btn-sm" id="clearAllBtn">
+            <i class="fas fa-trash"></i> Clear All
+        </button>
+    </div>
+</div>
+
+<!-- Filter Badges -->
+<div class="mb-4">
+    <div class="d-flex flex-wrap gap-2">
+        <span class="badge bg-primary filter-badge active" data-filter="all">
+            All <span class="badge bg-light text-dark">{{ notifications.count }}</span>
+        </span>
+        <span class="badge bg-danger filter-badge" data-filter="like">
+            <i class="fas fa-heart"></i> Likes <span class="badge bg-light text-dark">{{ like_count }}</span>
+        </span>
+        <span class="badge bg-success filter-badge" data-filter="match">
+            <i class="fas fa-heart"></i> Matches <span class="badge bg-light text-dark">{{ match_count }}</span>
+        </span>
+        <span class="badge bg-info filter-badge" data-filter="message">
+            <i class="fas fa-envelope"></i> Messages <span class="badge bg-light text-dark">{{ message_count }}</span>
+        </span>
+        <span class="badge bg-warning filter-badge" data-filter="friend">
+            <i class="fas fa-user-plus"></i> Friends <span class="badge bg-light text-dark">{{ friend_count }}</span>
+        </span>
+        <span class="badge bg-secondary filter-badge" data-filter="view">
+            <i class="fas fa-eye"></i> Views <span class="badge bg-light text-dark">{{ view_count }}</span>
+        </span>
+        <span class="badge bg-dark filter-badge" data-filter="unread">
+            <i class="fas fa-bell"></i> Unread <span class="badge bg-light text-dark">{{ unread_count }}</span>
+        </span>
+    </div>
+</div>
+
+<!-- Notifications List -->
+<div class="card">
+    <div class="card-body p-0">
+        {% if notifications %}
+            <div id="notificationsList">
+                {% for notification in notifications %}
+                <div class="notification-item {% if not notification.is_read %}unread{% endif %}" 
+                     data-type="{{ notification.activity_type }}" data-id="{{ notification.id }}">
+                    <div class="d-flex">
+                        <div class="flex-shrink-0 me-3">
+                            {% if notification.user.userprofile.profile_pic %}
+                            <img src="{{ notification.user.userprofile.profile_pic.url }}" 
+                                 class="rounded-circle notification-avatar"
+                                 alt="{{ notification.user.username }}">
+                            {% else %}
+                            <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center notification-avatar">
+                                <i class="fas fa-user text-white"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <a href="{% url 'accounts:view_profile' notification.user.id %}" class="text-decoration-none">
+                                            {{ notification.user.get_full_name|default:notification.user.username }}
+                                        </a>
+                                    </h6>
+                                    <p class="mb-1">
+                                        {% if notification.activity_type == 'like' %}
+                                            <i class="fas fa-heart text-danger"></i> Liked your profile
+                                        {% elif notification.activity_type == 'mutual_match' %}
+                                            <i class="fas fa-heart text-success"></i> It's a match!
+                                        {% elif notification.activity_type == 'message' %}
+                                            <i class="fas fa-envelope text-primary"></i> Sent you a message
+                                        {% elif notification.activity_type == 'friend_request' %}
+                                            <i class="fas fa-user-plus text-warning"></i> Sent you a friend request
+                                        {% elif notification.activity_type == 'profile_view' %}
+                                            <i class="fas fa-eye text-info"></i> Viewed your profile
+                                        {% elif notification.activity_type == 'friend_accept' %}
+                                            <i class="fas fa-user-check text-success"></i> Accepted your friend request
+                                        {% else %}
+                                            <i class="fas fa-bell text-secondary"></i> {{ notification.activity_type|title }}
+                                        {% endif %}
+                                    </p>
+                                    {% if notification.metadata %}
+                                    <p class="mb-0 small text-muted">
+                                        {% if notification.activity_type == 'message' %}
+                                            "{{ notification.metadata.message|truncatechars:50 }}"
+                                        {% endif %}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted">{{ notification.created_at|timesince }} ago</small>
+                                    {% if not notification.is_read %}
+                                    <span class="badge bg-danger rounded-pill ms-1">New</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Actions -->
+                            <div class="mt-2">
+                                {% if notification.activity_type == 'like' %}
+                                <button class="btn btn-sm btn-outline-danger like-back-btn" 
+                                        data-profile-id="{{ notification.user.userprofile.id }}">
+                                    <i class="fas fa-heart"></i> Like Back
+                                </button>
+                                <a href="{% url 'accounts:view_profile' notification.user.id %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i> View Profile
+                                </a>
+                                {% elif notification.activity_type == 'mutual_match' %}
+                                <a href="/chat/conversation/{{ notification.user.id }}/" 
+                                   class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-envelope"></i> Message
+                                </a>
+                                <a href="{% url 'accounts:view_profile' notification.user.id %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i> View Profile
+                                </a>
+                                {% elif notification.activity_type == 'friend_request' %}
+                                <button class="btn btn-sm btn-success accept-request-btn" 
+                                        data-request-id="{{ notification.metadata.request_id }}">
+                                    <i class="fas fa-check"></i> Accept
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger decline-request-btn" 
+                                        data-request-id="{{ notification.metadata.request_id }}">
+                                    <i class="fas fa-times"></i> Decline
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Load More Button -->
+            {% if notifications.has_next %}
+            <div class="text-center p-3">
+                <button class="btn btn-outline-primary" id="loadMoreBtn" data-page="2">
+                    <i class="fas fa-sync"></i> Load More Notifications
+                </button>
+            </div>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No Notifications</h4>
+                <p class="text-muted">You're all caught up! New notifications will appear here.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Empty State (when filtered) -->
+<div id="emptyState" class="text-center py-5" style="display: none;">
+    <i class="fas fa-filter fa-3x text-muted mb-3"></i>
+    <h4 class="text-muted">No Notifications</h4>
+    <p class="text-muted">No notifications match your filter criteria.</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Filter notifications
+    $('.filter-badge').click(function() {
+        const filter = $(this).data('filter');
+        
+        // Update active badge
+        $('.filter-badge').removeClass('active');
+        $(this).addClass('active');
+        
+        // Filter notifications
+        if (filter === 'all') {
+            $('.notification-item').show();
+            $('#emptyState').hide();
+        } else {
+            let visibleCount = 0;
+            $('.notification-item').each(function() {
+                const type = $(this).data('type');
+                const isUnread = $(this).hasClass('unread');
+                
+                if ((filter === 'unread' && isUnread) || 
+                    (filter !== 'unread' && type === filter)) {
+                    $(this).show();
+                    visibleCount++;
+                } else {
+                    $(this).hide();
+                }
+            });
+            
+            // Show/hide empty state
+            if (visibleCount === 0) {
+                $('#emptyState').show();
+            } else {
+                $('#emptyState').hide();
+            }
+        }
+    });
+    
+    // Mark notification as read on click
+    $('.notification-item').click(function(e) {
+        if (!$(e.target).is('button, a')) {
+            const notificationId = $(this).data('id');
+            markAsRead(notificationId, $(this));
+        }
+    });
+    
+    // Mark all as read
+    $('#markAllReadBtn').click(function() {
+        $('.notification-item.unread').each(function() {
+            const notificationId = $(this).data('id');
+            markAsRead(notificationId, $(this));
+        });
+        showToast('All notifications marked as read.', 'success');
+    });
+    
+    // Clear all notifications
+    $('#clearAllBtn').click(function() {
+        if (confirm('Are you sure you want to clear all notifications?')) {
+            // In a real app, you would make AJAX call
+            $('#notificationsList').empty();
+            showToast('All notifications cleared.', 'info');
+        }
+    });
+    
+    // Load more notifications
+    $('#loadMoreBtn').click(function() {
+        const page = $(this).data('page');
+        const btn = $(this);
+        
+        btn.prop('disabled', true);
+        btn.html('<i class="fas fa-spinner fa-spin"></i> Loading...');
+        
+        // In a real app, you would make AJAX call
+        setTimeout(() => {
+            // Simulate loading more notifications
+            btn.remove();
+            showToast('More notifications loaded.', 'success');
+        }, 1000);
+    });
+    
+    // Like back functionality
+    $('.like-back-btn').click(function(e) {
+        e.stopPropagation();
+        const btn = $(this);
+        const profileId = btn.data('profile-id');
+        const url = '/dashboard/like/' + profileId + '/';
+        
+        btn.prop('disabled', true);
+        btn.html('<i class="fas fa-spinner fa-spin"></i>');
+        
+        $.post(url, {}, function(response) {
+            if (response.success) {
+                btn.removeClass('btn-outline-danger').addClass('btn-danger');
+                btn.html('<i class="fas fa-heart"></i> Liked Back');
+                
+                if (response.is_mutual) {
+                    showToast('It\'s a match! 🎉', 'success');
+                } else {
+                    showToast('Profile liked successfully!', 'success');
+                }
+            } else {
+                showToast(response.message || 'Failed to like profile', 'danger');
+                btn.prop('disabled', false);
+                btn.html('<i class="fas fa-heart"></i> Like Back');
+            }
+        }).fail(function() {
+            showToast('An error occurred. Please try again.', 'danger');
+            btn.prop('disabled', false);
+            btn.html('<i class="fas fa-heart"></i> Like Back');
+        });
+    });
+    
+    // Accept friend request
+    $('.accept-request-btn').click(function(e) {
+        e.stopPropagation();
+        const btn = $(this);
+        const requestId = btn.data('request-id');
+        const url = '/friendship/accept-request/' + requestId + '/';
+        
+        btn.prop('disabled', true);
+        btn.html('<i class="fas fa-spinner fa-spin"></i>');
+        
+        $.post(url, {}, function(response) {
+            if (response.success) {
+                showToast('Friend request accepted!', 'success');
+                btn.closest('.notification-item').fadeOut();
+            } else {
+                showToast(response.message || 'Failed to accept request', 'danger');
+                btn.prop('disabled', false);
+                btn.html('<i class="fas fa-check"></i> Accept');
+            }
+        });
+    });
+    
+    // Decline friend request
+    $('.decline-request-btn').click(function(e) {
+        e.stopPropagation();
+        const btn = $(this);
+        const requestId = btn.data('request-id');
+        const url = '/friendship/decline-request/' + requestId + '/';
+        
+        if (confirm('Are you sure you want to decline this friend request?')) {
+            btn.prop('disabled', true);
+            btn.html('<i class="fas fa-spinner fa-spin"></i>');
+            
+            $.post(url, {}, function(response) {
+                if (response.success) {
+                    showToast('Friend request declined', 'info');
+                    btn.closest('.notification-item').fadeOut();
+                } else {
+                    showToast(response.message || 'Failed to decline request', 'danger');
+                    btn.prop('disabled', false);
+                    btn.html('<i class="fas fa-times"></i> Decline');
+                }
+            });
+        }
+    });
+    
+    function markAsRead(notificationId, element) {
+        if (element.hasClass('unread')) {
+            element.removeClass('unread');
+            element.find('.badge').remove();
+            
+            // In a real app, you would make AJAX call
+            // $.post('/notifications/mark-read/' + notificationId + '/');
+        }
+    }
+    
+    function showToast(message, type) {
+        const toast = $(`<div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>`);
+        
+        $('.toast-container').append(toast);
+        const bsToast = new bootstrap.Toast(toast[0]);
+        bsToast.show();
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+    
+    // Auto-mark as read when notification is visible for 2 seconds
+    let observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const element = $(entry.target);
+                if (element.hasClass('unread')) {
+                    setTimeout(() => {
+                        const notificationId = element.data('id');
+                        markAsRead(notificationId, element);
+                    }, 2000);
+                }
+            }
+        });
+    }, { threshold: 0.5 });
+    
+    // Observe all notification items
+    $('.notification-item').each(function() {
+        observer.observe(this);
+    });
+});
+</script>
+{% endblock %}

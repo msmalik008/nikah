@@ -1,0 +1,436 @@
+{% extends 'accounts/base.html' %}
+{% load account_tags %}
+
+{% block title %}Account Settings - SoulMate{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-nav {
+        position: sticky;
+        top: 20px;
+    }
+    
+    .settings-nav .nav-link {
+        border-radius: 10px;
+        margin-bottom: 5px;
+        padding: 12px 20px;
+    }
+    
+    .settings-nav .nav-link.active {
+        background: rgba(156, 39, 176, 0.2);
+        border-left: 3px solid var(--primary-color);
+    }
+    
+    .settings-section {
+        background: var(--card-bg);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .danger-zone {
+        border: 2px solid #dc3545;
+        background: rgba(220, 53, 69, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-3">
+        <div class="settings-nav">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">Settings</h5>
+                    
+                    <nav class="nav flex-column">
+                        <a class="nav-link active" href="#profile" data-bs-toggle="tab">
+                            <i class="fas fa-user me-2"></i> Profile Settings
+                        </a>
+                        <a class="nav-link" href="#security" data-bs-toggle="tab">
+                            <i class="fas fa-shield-alt me-2"></i> Security
+                        </a>
+                        <a class="nav-link" href="#privacy" data-bs-toggle="tab">
+                            <i class="fas fa-eye me-2"></i> Privacy
+                        </a>
+                        <a class="nav-link" href="#activity" data-bs-toggle="tab">
+                            <i class="fas fa-history me-2"></i> Activity
+                        </a>
+                        <a class="nav-link" href="#danger" data-bs-toggle="tab">
+                            <i class="fas fa-exclamation-triangle me-2"></i> Danger Zone
+                        </a>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-9">
+        <div class="tab-content">
+            <!-- Profile Settings Tab -->
+            <div class="tab-pane fade show active" id="profile">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4">
+                            <i class="fas fa-user me-2"></i> Profile Settings
+                        </h4>
+                        
+                        <!-- Profile Completion -->
+                        <div class="settings-section">
+                            <h5>Profile Completion</h5>
+                            {% profile_completion_progress profile %}
+                            <div class="mt-3">
+                                <a href="{% url 'accounts:profile_edit' %}" class="btn btn-primary">
+                                    <i class="fas fa-edit me-1"></i> Edit Profile
+                                </a>
+                                <a href="{% url 'accounts:profile_view' %}" class="btn btn-outline-light ms-2">
+                                    <i class="fas fa-eye me-1"></i> View Profile
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Account Information -->
+                        <div class="settings-section">
+                            <h5>Account Information</h5>
+                            <form method="POST" action="{% url 'accounts:update_user_info' %}">
+                                {% csrf_token %}
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="username" class="form-label">Username</label>
+                                        {{ user_form.username }}
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label for="email" class="form-label">Email Address</label>
+                                        {{ user_form.email }}
+                                        <small class="form-text text-muted">
+                                            {% if profile.email_verified %}
+                                                <span class="text-success">
+                                                    <i class="fas fa-check-circle me-1"></i> Verified
+                                                </span>
+                                            {% else %}
+                                                <span class="text-warning">
+                                                    <i class="fas fa-exclamation-circle me-1"></i> Not verified
+                                                </span>
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label for="first_name" class="form-label">First Name</label>
+                                        {{ user_form.first_name }}
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label for="last_name" class="form-label">Last Name</label>
+                                        {{ user_form.last_name }}
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i> Update Information
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- Email Management -->
+                        <div class="settings-section">
+                            <h5>Email Management</h5>
+                            <p class="text-muted">Update your email address or verify your current email</p>
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'accounts:update_email' %}" class="btn btn-outline-primary">
+                                    <i class="fas fa-envelope me-1"></i> Change Email
+                                </a>
+                                
+                                {% if not profile.email_verified %}
+                                <button class="btn btn-outline-warning">
+                                    <i class="fas fa-paper-plane me-1"></i> Resend Verification
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Security Tab -->
+            <div class="tab-pane fade" id="security">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4">
+                            <i class="fas fa-shield-alt me-2"></i> Security
+                        </h4>
+                        
+                        <!-- Password Change -->
+                        <div class="settings-section">
+                            <h5>Change Password</h5>
+                            <p class="text-muted">Update your password to keep your account secure</p>
+                            <a href="{% url 'accounts:change_password' %}" class="btn btn-primary">
+                                <i class="fas fa-lock me-1"></i> Change Password
+                            </a>
+                        </div>
+                        
+                        <!-- Two-Factor Authentication -->
+                        <div class="settings-section">
+                            <h5>Two-Factor Authentication</h5>
+                            <p class="text-muted">Add an extra layer of security to your account</p>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="2faToggle">
+                                <label class="form-check-label" for="2faToggle">
+                                    Enable Two-Factor Authentication
+                                </label>
+                            </div>
+                            <small class="text-muted">When enabled, you'll need to enter a code from your authenticator app when signing in.</small>
+                        </div>
+                        
+                        <!-- Login Sessions -->
+                        <div class="settings-section">
+                            <h5>Login Sessions</h5>
+                            <p class="text-muted">Manage your active login sessions</p>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                You're currently logged in on this device.
+                            </div>
+                            <button class="btn btn-outline-danger">
+                                <i class="fas fa-sign-out-alt me-1"></i> Log Out All Other Sessions
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Privacy Tab -->
+            <div class="tab-pane fade" id="privacy">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4">
+                            <i class="fas fa-eye me-2"></i> Privacy
+                        </h4>
+                        
+                        <!-- Profile Visibility -->
+                        <div class="settings-section">
+                            <h5>Profile Visibility</h5>
+                            <p class="text-muted">Control who can see your profile</p>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="profileVisibility" 
+                                       {% if profile.is_visible %}checked{% endif %}
+                                       onchange="updateProfileVisibility(this.checked)">
+                                <label class="form-check-label" for="profileVisibility">
+                                    Make my profile visible to others
+                                </label>
+                            </div>
+                            <small class="text-muted">
+                                When disabled, your profile won't appear in search results or match suggestions.
+                            </small>
+                        </div>
+                        
+                        <!-- Data Sharing -->
+                        <div class="settings-section">
+                            <h5>Data Sharing</h5>
+                            <p class="text-muted">Control how your data is used</p>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="analytics">
+                                <label class="form-check-label" for="analytics">
+                                    Allow analytics to improve service
+                                </label>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="marketing">
+                                <label class="form-check-label" for="marketing">
+                                    Receive marketing emails
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="partnerOffers">
+                                <label class="form-check-label" for="partnerOffers">
+                                    Receive offers from partners
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Activity Tab -->
+            <div class="tab-pane fade" id="activity">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4">
+                            <i class="fas fa-history me-2"></i> Activity
+                        </h4>
+                        
+                        <!-- Recent Activity -->
+                        <div class="settings-section">
+                            <h5>Recent Activity</h5>
+                            <p class="text-muted">Your recent account activity</p>
+                            
+                            <div class="list-group">
+                                {% for activity in user.activities.all|slice:":5" %}
+                                <div class="list-group-item bg-dark border-light">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ activity.activity_type|format_activity_type }}</h6>
+                                        <small>{{ activity.created_at|timesince }} ago</small>
+                                    </div>
+                                    {% if activity.additional_info %}
+                                        <p class="mb-1 small text-muted">{{ activity.additional_info }}</p>
+                                    {% endif %}
+                                    <small>
+                                        <i class="fas fa-globe me-1"></i> {{ activity.ip_address|default:"Unknown IP" }}
+                                    </small>
+                                </div>
+                                {% empty %}
+                                <div class="list-group-item bg-dark border-light text-center text-muted">
+                                    No recent activity
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="mt-3">
+                                <a href="{% url 'accounts:activity_history' %}" class="btn btn-outline-light">
+                                    <i class="fas fa-list me-1"></i> View All Activity
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Data Export -->
+                        <div class="settings-section">
+                            <h5>Data Export</h5>
+                            <p class="text-muted">Download a copy of your data</p>
+                            <button class="btn btn-outline-primary">
+                                <i class="fas fa-download me-1"></i> Request Data Export
+                            </button>
+                            <small class="text-muted d-block mt-2">
+                                We'll prepare your data and send it to your email within 48 hours.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Danger Zone Tab -->
+            <div class="tab-pane fade" id="danger">
+                <div class="card danger-zone">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4 text-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i> Danger Zone
+                        </h4>
+                        
+                        <!-- Deactivate Account -->
+                        <div class="settings-section">
+                            <h5 class="text-danger">Deactivate Account</h5>
+                            <p class="text-muted">
+                                Temporarily deactivate your account. Your profile will be hidden but can be restored later.
+                            </p>
+                            <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deactivateModal">
+                                <i class="fas fa-user-slash me-1"></i> Deactivate Account
+                            </button>
+                        </div>
+                        
+                        <!-- Delete Account -->
+                        <div class="settings-section">
+                            <h5 class="text-danger">Delete Account</h5>
+                            <p class="text-muted">
+                                <strong>Warning:</strong> This action cannot be undone. All your data will be permanently deleted.
+                            </p>
+                            <a href="{% url 'accounts:delete_account' %}" class="btn btn-danger">
+                                <i class="fas fa-trash me-1"></i> Delete Account Permanently
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Deactivate Modal -->
+<div class="modal fade" id="deactivateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i> Deactivate Account
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to deactivate your account?</p>
+                <ul class="text-muted">
+                    <li>Your profile will be hidden from other users</li>
+                    <li>You won't appear in search results</li>
+                    <li>Your matches and messages will be preserved</li>
+                    <li>You can reactivate at any time by logging in</li>
+                </ul>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger">Deactivate Account</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Update profile visibility via AJAX
+    function updateProfileVisibility(isVisible) {
+        fetch('{% url "accounts:update_visibility" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: 'is_visible=' + isVisible
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('Profile visibility updated successfully!', 'success');
+            } else {
+                showAlert('Error updating visibility: ' + data.error, 'danger');
+                document.getElementById('profileVisibility').checked = !isVisible;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('Network error occurred', 'danger');
+            document.getElementById('profileVisibility').checked = !isVisible;
+        });
+    }
+    
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.row'));
+        
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+    
+    // Tab switching
+    document.addEventListener('DOMContentLoaded', function() {
+        const navLinks = document.querySelectorAll('.settings-nav .nav-link');
+        navLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                navLinks.forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+        
+        // Handle URL hash for tabs
+        if (window.location.hash) {
+            const tab = document.querySelector(`.settings-nav .nav-link[href="${window.location.hash}"]`);
+            if (tab) {
+                tab.click();
+            }
+        }
+    });
+</script>
+{% endblock %}

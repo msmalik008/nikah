@@ -1,0 +1,23 @@
+<div class="profile-field mb-3">
+    <div class="field-label d-flex align-items-center">
+        <strong>{{ label }}:</strong>
+        {% if not is_visible %}
+            <span class="badge bg-secondary ms-2">
+                <i class="fas fa-eye-slash me-1"></i> Private
+            </span>
+        {% endif %}
+    </div>
+    <div class="field-value mt-1">
+        {% if is_visible %}
+            {% if has_display_method %}
+                <span class="text-light">{{ display_value }}</span>
+            {% else %}
+                <span class="text-light">{{ value|default:"Not specified" }}</span>
+            {% endif %}
+        {% else %}
+            <span class="text-muted">
+                <i class="fas fa-lock me-1"></i> Hidden
+            </span>
+        {% endif %}
+    </div>
+</div>

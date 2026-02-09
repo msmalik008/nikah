@@ -1,0 +1,302 @@
+<div class="card mb-4" id="post-{{ post.id }}">
+    <div class="card-body">
+        <!-- Post Header -->
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div class="d-flex align-items-center">
+                {% if post.user.userprofile.profile_pic %}
+                    <img src="{{ post.user.userprofile.profile_pic.url }}" 
+                         class="rounded-circle me-3" 
+                         style="width: 50px; height: 50px; object-fit: cover;"
+                         alt="{{ post.user.username }}">
+                {% else %}
+                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center me-3"
+                         style="width: 50px; height: 50px;">
+                        <span class="text-white fw-bold">{{ post.user.username|first|upper }}</span>
+                    </div>
+                {% endif %}
+                <div>
+                    <h5 class="mb-0">{{ post.user.username }}</h5>
+                    <small class="text-muted">{{ post.created_at|timesince }} ago</small>
+                </div>
+            </div>
+            
+            <!-- Post Actions Dropdown -->
+            {% if post.user == request.user %}
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-ellipsis-h"></i>
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="#" 
+                           onclick="deletePost({{ post.id }})">
+                            <i class="fas fa-trash text-danger me-2"></i>Delete
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Post Content -->
+        <p class="card-text">{{ post.content|linebreaks }}</p>
+
+        <!-- Post Image -->
+        {% if post.image %}
+            <div class="mb-3">
+                <img src="{{ post.image.url }}" 
+                     class="img-fluid rounded" 
+                     alt="Post image"
+                     style="max-height: 500px; object-fit: contain;">
+            </div>
+        {% endif %}
+
+        <!-- Post Stats -->
+        <div class="d-flex justify-content-between text-muted mb-3">
+            <div>
+                <i class="fas fa-thumbs-up"></i> {{ post.likes_count }}
+                <i class="fas fa-comment ms-3"></i> {{ post.comments_count }}
+            </div>
+        </div>
+
+        <!-- Post Actions -->
+        <div class="border-top border-bottom py-2 mb-3">
+            <div class="row">
+                <div class="col">
+                    <button class="btn btn-outline-secondary w-100 {% if post.user_liked %}active{% endif %}" 
+                            onclick="likePost({{ post.id }})"
+                            id="like-btn-{{ post.id }}">
+                        <i class="fas fa-thumbs-up"></i> 
+                        <span id="like-text-{{ post.id }}">
+                            {% if post.user_liked %}Liked{% else %}Like{% endif %}
+                        </span>
+                    </button>
+                </div>
+                <div class="col">
+                    <button class="btn btn-outline-secondary w-100" 
+                            onclick="toggleComments({{ post.id }})"
+                            id="comment-btn-{{ post.id }}">
+                        <i class="fas fa-comment"></i> Comment
+                    </button>
+                </div>
+                <div class="col">
+                    <button class="btn btn-outline-secondary w-100 {% if post.user_bookmarked %}active{% endif %}" 
+                            onclick="bookmarkPost({{ post.id }})"
+                            id="bookmark-btn-{{ post.id }}">
+                        <i class="fas fa-bookmark"></i> 
+                        <span id="bookmark-text-{{ post.id }}">
+                            {% if post.user_bookmarked %}Saved{% else %}Save{% endif %}
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comments Section -->
+        <div id="comments-section-{{ post.id }}" style="display: none;">
+            <!-- Existing Comments -->
+            <div id="comments-list-{{ post.id }}">
+                {% for comment in post.comments.all %}
+                    {% include 'useractivity/partials/comment_item.html' with comment=comment %}
+                {% endfor %}
+            </div>
+
+            <!-- Comment Form -->
+            <form method="post" action="{% url 'useractivity:comment_post' post.id %}" 
+                  class="mt-3" id="comment-form-{{ post.id }}">
+                {% csrf_token %}
+                <div class="input-group">
+                    <input type="text" 
+                           name="content" 
+                           class="form-control" 
+                           placeholder="Write a comment..." 
+                           required
+                           maxlength="500">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Like post
+function likePost(postId) {
+    fetch(`/api/activity/post/${postId}/like/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const btn = document.getElementById(`like-btn-${postId}`);
+            const text = document.getElementById(`like-text-${postId}`);
+            const likesCount = btn.querySelector('.fa-thumbs-up').nextSibling;
+            
+            if (data.action === 'liked') {
+                btn.classList.add('active');
+                text.textContent = 'Liked';
+                // Update likes count
+                if (likesCount) {
+                    const currentCount = parseInt(likesCount.textContent) || 0;
+                    likesCount.textContent = currentCount + 1;
+                }
+            } else {
+                btn.classList.remove('active');
+                text.textContent = 'Like';
+                // Update likes count
+                if (likesCount) {
+                    const currentCount = parseInt(likesCount.textContent) || 0;
+                    likesCount.textContent = Math.max(0, currentCount - 1);
+                }
+            }
+        }
+    });
+}
+
+// Toggle comments
+function toggleComments(postId) {
+    const commentsSection = document.getElementById(`comments-section-${postId}`);
+    const btn = document.getElementById(`comment-btn-${postId}`);
+    
+    if (commentsSection.style.display === 'none') {
+        commentsSection.style.display = 'block';
+        btn.classList.add('active');
+        // Load comments if not already loaded
+        if (!commentsSection.dataset.loaded) {
+            loadComments(postId);
+        }
+    } else {
+        commentsSection.style.display = 'none';
+        btn.classList.remove('active');
+    }
+}
+
+// Load comments via AJAX
+function loadComments(postId) {
+    fetch(`/api/activity/post/${postId}/comments/`)
+    .then(response => response.json())
+    .then(data => {
+        const container = document.getElementById(`comments-list-${postId}`);
+        container.innerHTML = '';
+        
+        if (data.comments && data.comments.length > 0) {
+            data.comments.forEach(comment => {
+                const commentHtml = `
+                <div class="d-flex mb-2">
+                    <img src="${comment.user.profile_pic || '/static/img/default-avatar.png'}" 
+                         class="rounded-circle me-2" 
+                         style="width: 32px; height: 32px;">
+                    <div class="bg-light rounded p-2">
+                        <strong>${comment.user.username}</strong>
+                        <p class="mb-0">${comment.content}</p>
+                        <small class="text-muted">${comment.created_at}</small>
+                    </div>
+                </div>`;
+                container.innerHTML += commentHtml;
+            });
+        }
+        
+        document.getElementById(`comments-section-${postId}`).dataset.loaded = true;
+    });
+}
+
+// Bookmark post
+function bookmarkPost(postId) {
+    fetch(`/api/activity/post/${postId}/bookmark/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const btn = document.getElementById(`bookmark-btn-${postId}`);
+            const text = document.getElementById(`bookmark-text-${postId}`);
+            
+            if (data.action === 'added') {
+                btn.classList.add('active');
+                text.textContent = 'Saved';
+            } else {
+                btn.classList.remove('active');
+                text.textContent = 'Save';
+            }
+        }
+    });
+}
+
+// Delete post
+function deletePost(postId) {
+    if (confirm('Are you sure you want to delete this post?')) {
+        fetch(`/api/activity/post/${postId}/delete/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById(`post-${postId}`).remove();
+            } else {
+                alert('Failed to delete post');
+            }
+        });
+    }
+}
+
+// Handle comment form submission
+document.addEventListener('DOMContentLoaded', function() {
+    // Attach event listeners to comment forms
+    document.querySelectorAll('[id^="comment-form-"]').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const postId = this.id.split('-')[2];
+            submitComment(postId, this);
+        });
+    });
+});
+
+function submitComment(postId, form) {
+    const formData = new FormData(form);
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            form.reset();
+            // Add new comment to list
+            const container = document.getElementById(`comments-list-${postId}`);
+            const commentHtml = `
+            <div class="d-flex mb-2">
+                <img src="{{ request.user.userprofile.profile_pic.url|default:'/static/img/default-avatar.png' }}" 
+                     class="rounded-circle me-2" 
+                     style="width: 32px; height: 32px;">
+                <div class="bg-light rounded p-2">
+                    <strong>{{ request.user.username }}</strong>
+                    <p class="mb-0">${form.querySelector('[name=content]').value}</p>
+                    <small class="text-muted">Just now</small>
+                </div>
+            </div>`;
+            container.innerHTML += commentHtml;
+        } else {
+            alert('Error: ' + (data.errors || 'Failed to add comment'));
+        }
+    });
+}
+</script>

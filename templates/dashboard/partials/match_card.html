@@ -1,0 +1,48 @@
+<div class="match-card">
+    <div class="position-relative">
+        {% if profile.profile_pic %}
+        <img src="{{ profile.profile_pic.url }}" 
+             class="card-img-top" 
+             alt="{{ profile.user.username }}"
+             style="height: 200px; object-fit: cover;">
+        {% else %}
+        <div class="card-img-top bg-primary d-flex align-items-center justify-content-center" 
+             style="height: 200px;">
+            <span class="text-white fs-1">{{ profile.user.username|first|upper }}</span>
+        </div>
+        {% endif %}
+        <span class="compatibility-badge">{{ score }}%</span>
+    </div>
+    
+    <div class="card-body">
+        <h6 class="card-title fw-bold mb-1">{{ profile.user.get_full_name|default:profile.user.username }}</h6>
+        <p class="text-muted small mb-2">
+            <i class="bi bi-person me-1"></i>{{ profile.age }} yrs
+            <i class="bi bi-geo-alt ms-2 me-1"></i>{{ profile.city|default:"Not specified" }}
+        </p>
+        
+        <!-- Like button (for non-friendship actions) -->
+        <div class="d-flex gap-2 mb-2">
+            <form method="post" action="{% url 'like_profile' profile.id %}" class="d-inline w-100">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-heart me-1"></i>Like
+                </button>
+            </form>
+            
+            <!-- Add Friend button -->
+            <form method="post" action="{% url 'friendship:send_friend_request' profile.user.id %}" class="d-inline w-100">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-primary btn-sm w-100">
+                    <i class="bi bi-person-plus me-1"></i>Add Friend
+                </button>
+            </form>
+        </div>
+        
+        <!-- View profile button -->
+        <a href="{% url 'view_profile' profile.user.id %}" 
+           class="btn btn-outline-secondary btn-sm w-100">
+            <i class="bi bi-eye me-1"></i>View Profile
+        </a>
+    </div>
+</div>

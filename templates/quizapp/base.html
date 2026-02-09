@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Modern Match - Find Your Perfect Partner{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary: #6f42c1;
+            --primary-dark: #5a32a3;
+            --secondary: #fd7e14;
+            --success: #28a745;
+            --danger: #dc3545;
+            --light: #f8f9fa;
+            --dark: #343a40;
+            --body-color: #495057;
+            --border-color: #dee2e6;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--body-color);
+            background-color: #f9f9f9;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+        }
+        
+        .navbar-brand {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
+            font-size: 1.8rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            border-color: var(--primary-dark);
+        }
+        
+        .btn-outline-primary {
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .bg-primary {
+            background-color: var(--primary) !important;
+        }
+        
+        .text-primary {
+            color: var(--primary) !important;
+        }
+        
+        .border-primary {
+            border-color: var(--primary) !important;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        }
+        
+        .shadow-soft {
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        
+        .card-hover {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        
+        .rounded-xl {
+            border-radius: 15px;
+        }
+        
+        .rounded-xxl {
+            border-radius: 20px;
+        }
+        
+        .progress-bar-custom {
+            background-color: var(--primary);
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--danger);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .profile-image {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 5px solid white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .profile-image-sm {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .online-status {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--success);
+            border: 2px solid white;
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+        }
+        
+        .message-bubble {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        
+        .message-bubble.sent {
+            background-color: var(--primary);
+            color: white;
+            border-bottom-right-radius: 4px;
+            margin-left: auto;
+        }
+        
+        .message-bubble.received {
+            background-color: #e9ecef;
+            color: var(--dark);
+            border-bottom-left-radius: 4px;
+        }
+        
+        .typing-indicator {
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--dark);
+            margin: 0 2px;
+            animation: typing 1.4s infinite;
+        }
+        
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.6; }
+            30% { transform: translateY(-8px); opacity: 1; }
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .profile-image {
+                width: 120px;
+                height: 120px;
+            }
+            
+            .message-bubble {
+                max-width: 85%;
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Updated Navigation - Remove href navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm sticky-top">
+        <div class="container">
+            <!-- Brand with AJAX handling -->
+            <a class="navbar-brand fw-bold" href="{% url 'dashboard:dashboard' %}?tab=timeline" id="brandLink">
+                <i class="bi bi-heart-fill me-2"></i>Modern Match
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarMain">
+                <ul class="navbar-nav me-auto">
+                    <!-- Timeline -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_tab == 'timeline' %}active active-tab{% endif %}" 
+                        href="{% url 'dashboard:dashboard' %}?tab=timeline">
+                            <i class="bi bi-house-door me-1"></i> Timeline
+                        </a>
+                    </li>
+                    
+                    <!-- Discover -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_tab == 'discover' %}active active-tab{% endif %}" 
+                        href="{% url 'dashboard:dashboard' %}?tab=discover">
+                            <i class="bi bi-compass me-1"></i> Discover
+                        </a>
+                    </li>
+                    
+                    <!-- Matches -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_tab == 'matches' %}active active-tab{% endif %}" 
+                        href="{% url 'dashboard:dashboard' %}?tab=matches">
+                            <i class="bi bi-heart me-1"></i> Matches
+                        </a>
+                    </li>
+                    
+                    <!-- Friends Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-people me-1"></i> Friends
+                            {% if pending_requests_count %}
+                            <span class="badge bg-danger">{{ pending_requests_count }}</span>
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <!-- All Friends -->
+                            <li>
+                                <a class="dropdown-item" href="{% url 'dashboard:dashboard' %}?tab=friends">
+                                    <i class="bi bi-people me-2"></i> All Friends
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            
+                            <!-- Received Requests -->
+                            <li>
+                                <a class="dropdown-item" href="{% url 'dashboard:dashboard' %}?tab=friends&filter=received">
+                                    <i class="bi bi-person-plus me-2"></i> Received Requests
+                                    {% if pending_requests_count %}
+                                    <span class="badge bg-primary float-end">{{ pending_requests_count }}</span>
+                                    {% endif %}
+                                </a>
+                            </li>
+                            
+                            <!-- Sent Requests -->
+                            <li>
+                                <a class="dropdown-item" href="{% url 'dashboard:dashboard' %}?tab=friends&filter=sent">
+                                    <i class="bi bi-clock me-2"></i> Sent Requests
+                                </a>
+                            </li>
+                            
+                            <!-- Rejected Requests -->
+                            <li>
+                                <a class="dropdown-item" href="{% url 'dashboard:dashboard' %}?tab=friends&filter=rejected">
+                                    <i class="bi bi-x-circle me-2"></i> Rejected Requests
+                                </a>
+                            </li>
+                            
+                            <!-- Blocked Users -->
+                            <li>
+                                <a class="dropdown-item" href="{% url 'dashboard:dashboard' %}?tab=friends&filter=blocked">
+                                    <i class="bi bi-shield-slash me-2"></i> Blocked Users
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    
+                    <!-- Messages -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_tab == 'messages' %}active active-tab{% endif %}" 
+                        href="{% url 'dashboard:dashboard' %}?tab=messages">
+                            <i class="bi bi-chat-dots me-1"></i> Messages
+                            {% if unread_messages_count %}
+                            <span class="badge bg-danger">{{ unread_messages_count }}</span>
+                            {% endif %}
+                        </a>
+                    </li>
+                </ul>
+                
+                <!-- User Dropdown -->
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
+                            {% if user_profile.profile_pic %}
+                            <img src="{{ user_profile.profile_pic.url }}" 
+                                class="rounded-circle me-2" 
+                                style="width: 30px; height: 30px; object-fit: cover;">
+                            {% else %}
+                            <div class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center me-2" 
+                                style="width: 30px; height: 30px;">
+                                {{ user.username|first|upper }}
+                            </div>
+                            {% endif %}
+                            {{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="{% url 'dashboard:dashboard' %}?tab=profile">
+                                    <i class="bi bi-person me-2"></i> My Profile
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'accounts:profile_edit' %}">
+                                    <i class="bi bi-pencil me-2"></i> Edit Profile
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="#">
+                                    <i class="bi bi-gear me-2"></i> Settings
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'accounts:logout' %}">
+                                    <i class="bi bi-box-arrow-right me-2"></i> Logout
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+
+
+    <!-- Messages Alerts -->
+    {% if messages %}
+    <div class="container mt-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+            <div class="d-flex align-items-center">
+                {% if message.tags == 'success' %}
+                <i class="bi bi-check-circle-fill me-2"></i>
+                {% elif message.tags == 'error' or message.tags == 'danger' %}
+                <i class="bi bi-exclamation-circle-fill me-2"></i>
+                {% elif message.tags == 'warning' %}
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                {% elif message.tags == 'info' %}
+                <i class="bi bi-info-circle-fill me-2"></i>
+                {% endif %}
+                <div>{{ message }}</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white mt-5">
+        <div class="container py-5">
+            <div class="row">
+                <div class="col-lg-4 mb-4">
+                    <h4 class="mb-3">
+                        <i class="bi bi-heart-fill me-2 text-primary"></i>ModernMatch
+                    </h4>
+                    <p class="text-white-50">
+                        Finding meaningful connections based on compatibility, values, and shared goals.
+                    </p>
+                    <div class="d-flex gap-3 mt-3">
+                        <a href="#" class="text-white-50 fs-5"><i class="bi bi-facebook"></i></a>
+                        <a href="#" class="text-white-50 fs-5"><i class="bi bi-twitter"></i></a>
+                        <a href="#" class="text-white-50 fs-5"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="text-white-50 fs-5"><i class="bi bi-linkedin"></i></a>
+                    </div>
+                </div>
+                
+                <div class="col-lg-2 col-md-4 mb-4">
+                    <h5 class="mb-3">Quick Links</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="/" class="text-white-50 text-decoration-none">Home</a></li>
+                        {% if user.is_authenticated %}
+                        <li class="mb-2"><a href="{% url 'dashboard:dashboard' %}" class="text-white-50 text-decoration-none">Dashboard</a></li>
+                        <li class="mb-2"><a href="{% url 'dashboard:dashboard'%}?tab=discover" class="text-white-50 text-decoration-none">Discover</a></li>
+                        {% else %}
+                        <li class="mb-2"><a href="{% url 'accounts:login' %}" class="text-white-50 text-decoration-none">Login</a></li>
+                        <li class="mb-2"><a href="{% url 'quiz_step' step='age' %}" class="text-white-50 text-decoration-none">Sign Up</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                
+                <div class="col-lg-3 col-md-4 mb-4">
+                    <h5 class="mb-3">Resources</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Success Stories</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Safety Tips</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Blog</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">FAQ</a></li>
+                    </ul>
+                </div>
+                
+                <div class="col-lg-3 col-md-4 mb-4">
+                    <h5 class="mb-3">Legal</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Privacy Policy</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Terms of Service</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Cookie Policy</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Community Guidelines</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <hr class="bg-secondary">
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="text-white-50 mb-0">
+                        &copy; {% now "Y" %} ModernMatch. All rights reserved.
+                    </p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="text-white-50 mb-0">
+                        Made with <i class="bi bi-heart-fill text-danger"></i> for meaningful connections
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- jQuery CDN -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script>
+        // Auto-dismiss alerts after 5 seconds
+        $(document).ready(function() {
+            setTimeout(function() {
+                $('.alert').alert('close');
+            }, 5000);
+            
+            // Load notifications
+            loadNotifications();
+            
+            // Update notification count periodically
+            setInterval(updateNotificationCount, 30000);
+        });
+        
+        function loadNotifications() {
+            $.ajax({
+                url: '/api/notifications/recent/',
+                method: 'GET',
+                success: function(data) {
+                    const container = $('.notification-list');
+                    if (data.length === 0) {
+                        container.html('<div class="text-center py-3 text-muted">No notifications</div>');
+                        return;
+                    }
+                    
+                    let html = '';
+                    data.forEach(notification => {
+                        html += `
+                            <a href="${notification.url || '#'}" class="dropdown-item d-flex align-items-center py-2">
+                                <div class="flex-shrink-0 me-3">
+                                    <i class="bi bi-${notification.icon || 'bell'} text-${notification.type || 'primary'}"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="small">${notification.message}</div>
+                                    <div class="text-muted" style="font-size: 11px;">${notification.time}</div>
+                                </div>
+                            </a>
+                        `;
+                    });
+                    
+                    container.html(html);
+                },
+                error: function() {
+                    $('.notification-list').html('<div class="text-center py-3 text-danger">Error loading notifications</div>');
+                }
+            });
+        }
+        
+        function updateNotificationCount() {
+            $.ajax({
+                url: '/api/chat/unread-count/',
+                method: 'GET',
+                success: function(data) {
+                    const badge = $('.notification-badge');
+                    if (data.count > 0) {
+                        if (badge.length === 0) {
+                            $('.nav-link .bi-bell').after(`<span class="notification-badge">${data.count}</span>`);
+                        } else {
+                            badge.text(data.count);
+                        }
+                    } else {
+                        badge.remove();
+                    }
+                }
+            });
+        }
+        
+        // Form validation enhancement
+        $(document).on('submit', 'form', function() {
+            const submitBtn = $(this).find('button[type="submit"]');
+            if (submitBtn.length) {
+                submitBtn.prop('disabled', true);
+                submitBtn.html(`
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Processing...
+                `);
+            }
+        });
+        
+        // Smooth scrolling for anchor links
+        $('a[href^="#"]').on('click', function(event) {
+            if (this.hash !== "") {
+                event.preventDefault();
+                const hash = this.hash;
+                $('html, body').animate({
+                    scrollTop: $(hash).offset().top - 70
+                }, 800);
+            }
+        });
+        
+        // Initialize tooltips
+        $(function () {
+            $('[data-bs-toggle="tooltip"]').tooltip();
+        });
+        
+        // Initialize popovers
+        $(function () {
+            $('[data-bs-toggle="popover"]').popover();
+        });
+
+
+        $(document).ready(function() {
+            // Handle brand link click
+            $('#brandLink').on('click', function(e) {
+                e.preventDefault();
+                const url = $(this).attr('href');
+                window.history.pushState({}, '', url);
+                loadTabContent('timeline');
+            });
+        });
+
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

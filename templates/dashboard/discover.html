@@ -1,0 +1,121 @@
+<!-- Filters -->
+<div class="card dashboard-card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="fw-bold mb-3">Find Your Match</h5>
+        <form method="get" id="filterForm">
+            <input type="hidden" name="tab" value="discover">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Age Range</label>
+                    <div class="d-flex align-items-center">
+                        <input type="number" 
+                               name="age_min" 
+                               class="form-control" 
+                               placeholder="Min" 
+                               min="18" 
+                               max="100"
+                               value="{{ request.GET.age_min }}">
+                        <span class="mx-2">-</span>
+                        <input type="number" 
+                               name="age_max" 
+                               class="form-control" 
+                               placeholder="Max" 
+                               min="18" 
+                               max="100"
+                               value="{{ request.GET.age_max }}">
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">City</label>
+                    <input type="text" 
+                           name="city" 
+                           class="form-control" 
+                           placeholder="Any city"
+                           value="{{ request.GET.city }}">
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label">Sect</label>
+                    <select name="sect" class="form-select">
+                        <option value="">Any sect</option>
+                        <option value="Sunni" {% if request.GET.sect == 'Sunni' %}selected{% endif %}>Sunni</option>
+                        <option value="Shia" {% if request.GET.sect == 'Shia' %}selected{% endif %}>Shia</option>
+                        <option value="Other" {% if request.GET.sect == 'Other' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label">Education</label>
+                    <select name="education" class="form-select">
+                        <option value="">Any education</option>
+                        <option value="High School" {% if request.GET.education == 'High School' %}selected{% endif %}>High School</option>
+                        <option value="Bachelor" {% if request.GET.education == 'Bachelor' %}selected{% endif %}>Bachelor's</option>
+                        <option value="Master" {% if request.GET.education == 'Master' %}selected{% endif %}>Master's</option>
+                        <option value="PhD" {% if request.GET.education == 'PhD' %}selected{% endif %}>PhD</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-filter me-1"></i>Filter
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Matches Grid -->
+<div class="row g-4" id="matchesGrid">
+    {% if matches %}
+        {% for profile, score in matches %}
+        <div class="col-md-6 col-lg-4 col-xl-3">
+            {% include 'dashboard/partials/match_card.html' with profile=profile score=score %}
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="bi bi-people display-1 text-muted mb-3"></i>
+            <h5 class="text-muted mb-3">No matches found</h5>
+            <p class="text-muted">Try adjusting your filters or check back later.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Pagination -->
+{% if has_other_pages %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        </li>
+        {% endif %}
+        
+        {% for i in paginator.page_range %}
+            {% if page_obj.number == i %}
+            <li class="page-item active">
+                <span class="page-link">{{ i }}</span>
+            </li>
+            {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a>
+            </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}

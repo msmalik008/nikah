@@ -1,0 +1,232 @@
+{% load friendship_tags %}
+
+<div class="row">
+    <!-- Friend Requests -->
+    <div class="col-lg-6">
+        <div class="card dashboard-card shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom-0">
+                <h5 class="fw-bold mb-0">
+                    <i class="bi bi-person-plus text-primary me-2"></i>Friend Requests
+                    {% if pending_requests %}
+                    <span class="badge bg-primary">{{ pending_requests.count }}</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if pending_requests %}
+                <div class="list-group list-group-flush">
+                    {% for req_user in pending_requests %}
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex align-items-center">
+                            <div class="position-relative me-3">
+                                {% if req_user.profile.profile_pic %}
+                                <img src="{{ req_user.profile.profile_pic.url }}" 
+                                    class="profile-image-sm rounded-circle">
+                                {% else %}
+                                <div class="profile-image-sm bg-primary text-white d-flex align-items-center justify-content-center rounded-circle">
+                                    {{ req_user.username|first|upper }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-0">{{ req_user.get_full_name|default:req_user.username }}</h6>
+                                <small class="text-muted">Sent request</small>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <form method="post" action="{% url 'friendship:accept_friend_request' req_user.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="bi bi-check"></i>
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'friendship:reject_friend_request' req_user.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-inbox display-4 text-muted mb-3"></i>
+                    <p class="text-muted">No friend requests</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Sent Requests -->
+        <div class="card dashboard-card shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom-0">
+                <h5 class="fw-bold mb-0">
+                    <i class="bi bi-clock text-secondary me-2"></i>Sent Requests
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if sent_requests %}
+                <div class="list-group list-group-flush">
+                    {% for req_user in sent_requests %}
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex align-items-center">
+                            <div class="position-relative me-3">
+                                {% if req_user.profile.profile_pic %}
+                                <img src="{{ req_user.profile.profile_pic.url }}" 
+                                    class="profile-image-sm rounded-circle">
+                                {% else %}
+                                <div class="profile-image-sm bg-secondary text-white d-flex align-items-center justify-content-center rounded-circle">
+                                    {{ req_user.username|first|upper }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-0">{{ req_user.get_full_name|default:req_user.username }}</h6>
+                                <small class="text-muted">Request pending</small>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <form method="post" action="{% url 'friendship:cancel_friend_request' req_user.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                        Cancel
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-check-circle display-4 text-muted mb-3"></i>
+                    <p class="text-muted">No sent requests</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Friends List -->
+    <div class="col-lg-6">
+        <div class="card dashboard-card shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom-0 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0">
+                    <i class="bi bi-people text-primary me-2"></i>My Friends
+                </h5>
+                <span class="badge bg-primary">{{ friends|length }}</span>
+            </div>
+            <div class="card-body">
+                {% if friends %}
+                <div class="list-group list-group-flush">
+                    {% for friend in friends %}
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex align-items-center">
+                            <div class="position-relative me-3">
+                                {% if friend.profile.profile_pic %}
+                                <img src="{{ friend.profile.profile_pic.url }}" 
+                                    class="profile-image-sm rounded-circle">
+                                {% else %}
+                                <div class="profile-image-sm bg-primary text-white d-flex align-items-center justify-content-center rounded-circle">
+                                    {{ friend.username|first|upper }}
+                                </div>
+                                {% endif %}
+                                {% if friend.is_online %}
+                                <span class="online-status"></span>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-0">{{ friend.get_full_name|default:friend.username }}</h6>
+                                <small class="text-muted">
+                                    {% if friend.is_online %}
+                                    Online
+                                    {% else %}
+                                    Offline
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'chat' %}?with={{ friend.id }}" 
+                                class="btn btn-primary btn-sm">
+                                    <i class="bi bi-chat-dots"></i>
+                                </a>
+                                <form method="post" 
+                                    action="{% url 'friendship:remove_friend' friend.id %}" 
+                                    onsubmit="return confirm('Remove {{ friend.username }} from friends?');"
+                                    class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                        <i class="bi bi-person-dash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-people display-4 text-muted mb-3"></i>
+                    <p class="text-muted">No friends yet</p>
+                    <a href="?tab=discover" class="btn btn-outline-primary">
+                        Discover People
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Blocked Users -->
+<div class="card dashboard-card shadow-sm">
+    <div class="card-header bg-white border-bottom-0">
+        <h5 class="fw-bold mb-0">
+            <i class="bi bi-shield-slash text-danger me-2"></i>Blocked Users
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if blocked_by_user %}
+        <div class="row g-3">
+            {% for blocked_user in blocked_by_user %}
+            <div class="col-md-4">
+                <div class="match-card">
+                    <div class="position-relative">
+                        {% if blocked_user.profile.profile_pic %}
+                        <img src="{{ blocked_user.profile.profile_pic.url }}" 
+                             class="card-img-top" 
+                             alt="{{ blocked_user.username }}"
+                             style="height: 150px; object-fit: cover;">
+                        {% else %}
+                        <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" 
+                             style="height: 150px;">
+                            <span class="text-white fs-3">{{ blocked_user.username|first|upper }}</span>
+                        </div>
+                        {% endif %}
+                        <span class="compatibility-badge" style="background: #dc3545;">Blocked</span>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="card-title fw-bold mb-1">{{ blocked_user.get_full_name|default:blocked_user.username }}</h6>
+                        <p class="text-muted small mb-2">
+                            <i class="bi bi-person me-1"></i>{{ blocked_user.profile.age }} yrs
+                        </p>
+                        <form method="post" action="{% url 'friendship:unblock_user' blocked_user.id %}" class="d-inline w-100">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-dark btn-sm w-100">
+                                <i class="bi bi-unlock me-1"></i>Unblock
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-shield-check display-4 text-muted mb-3"></i>
+            <p class="text-muted">No blocked users</p>
+        </div>
+        {% endif %}
+    </div>
+</div>

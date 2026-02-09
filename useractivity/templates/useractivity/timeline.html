@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Timeline - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <!-- Left Sidebar -->
+        <div class="col-lg-3 mb-4">
+            <!-- Create Post Card -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Create Post</h5>
+                    <form method="post" action="{% url 'useractivity:create_post' %}" enctype="multipart/form-data" id="post-form">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <textarea 
+                                name="content" 
+                                class="form-control" 
+                                placeholder="What's on your mind?" 
+                                rows="3" 
+                                maxlength="500"
+                                required
+                                style="resize: none;"
+                            ></textarea>
+                            <small class="text-muted">Maximum 500 characters</small>
+                        </div>
+                        <div class="mb-3">
+                            <input 
+                                type="file" 
+                                name="image" 
+                                class="form-control" 
+                                accept="image/*"
+                            >
+                            <small class="text-muted">Optional: Upload an image</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Post</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Activity Stats -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Activity Stats</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Posts
+                            <span class="badge bg-primary rounded-pill">{{ posts|length }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Friends
+                            <span class="badge bg-success rounded-pill">{{ friends_count }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Timeline -->
+        <div class="col-lg-6">
+            {% if posts %}
+                <div id="posts-container">
+                    {% for post in posts %}
+                        {% include 'useractivity/partials/post_card.html' with post=post %}
+                    {% endfor %}
+                </div>
+
+                <!-- Pagination -->
+                {% if is_paginated %}
+                    <nav aria-label="Post navigation">
+                        <ul class="pagination justify-content-center mt-4">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            {% else %}
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-newspaper fa-3x text-muted mb-3"></i>
+                        <h4>No posts yet</h4>
+                        <p class="text-muted">Be the first to share something or connect with friends to see their posts.</p>
+                        <a href="{% url 'friendship:get_likes' %}" class="btn btn-primary">Find Friends</a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="col-lg-3 mb-4">
+            <!-- Recent Activity -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Recent Activity</h5>
+                    <div id="recent-activity">
+                        <!-- Will be loaded via AJAX -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Online Friends -->
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Online Friends</h5>
+                    <div id="online-friends">
+                        <!-- Will be loaded via AJAX -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// AJAX form submission for posts
+document.getElementById('post-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const form = this;
+    const formData = new FormData(form);
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            form.reset();
+            // Reload posts or add new post dynamically
+            location.reload();
+        } else {
+            alert('Error: ' + (data.errors || 'Failed to create post'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    });
+});
+
+// Load recent activity via AJAX
+function loadRecentActivity() {
+    fetch('{% url "useractivity:activity_stream" %}?limit=5')
+    .then(response => response.json())
+    .then(data => {
+        const container = document.getElementById('recent-activity');
+        if (data.activities && data.activities.length > 0) {
+            let html = '<ul class="list-group list-group-flush">';
+            data.activities.forEach(activity => {
+                html += `<li class="list-group-item">${activity.description}</li>`;
+            });
+            html += '</ul>';
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = '<p class="text-muted">No recent activity</p>';
+        }
+    });
+}
+
+// Load online friends via AJAX
+function loadOnlineFriends() {
+    fetch('{% url "friendship:get_likes" %}?online_only=true')
+    .then(response => response.json())
+    .then(data => {
+        const container = document.getElementById('online-friends');
+        if (data.online_friends && data.online_friends.length > 0) {
+            let html = '<div class="list-group">';
+            data.online_friends.forEach(friend => {
+                html += `
+                <div class="list-group-item d-flex align-items-center">
+                    <img src="${friend.profile_pic || '{% static "img/default-avatar.png" %}'}" 
+                         class="rounded-circle me-3" 
+                         style="width: 40px; height: 40px; object-fit: cover;"
+                         alt="${friend.username}">
+                    <div>
+                        <h6 class="mb-0">${friend.username}</h6>
+                        <small class="text-success">● Online</small>
+                    </div>
+                </div>`;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = '<p class="text-muted">No friends online</p>';
+        }
+    });
+}
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadRecentActivity();
+    loadOnlineFriends();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+        loadRecentActivity();
+        loadOnlineFriends();
+    }, 30000);
+});
+</script>
+{% endblock %}

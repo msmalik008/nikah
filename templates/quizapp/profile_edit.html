@@ -1,0 +1,366 @@
+{% extends 'quizapp/base.html' %}
+
+{% block title %}Edit Profile - Modern Match{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-edit-section {
+        background: linear-gradient(rgba(111, 66, 193, 0.05), rgba(253, 126, 20, 0.05));
+        border-radius: 20px;
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+    
+    .profile-image-upload {
+        position: relative;
+        cursor: pointer;
+    }
+    
+    .profile-image-upload:hover .profile-image-overlay {
+        opacity: 1;
+    }
+    
+    .profile-image-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div class="text-center mb-5">
+                <h1 class="fw-bold mb-3">Edit Your Profile</h1>
+                <p class="lead text-muted">Update your information to get better match suggestions</p>
+            </div>
+            
+            <form method="post" enctype="multipart/form-data" novalidate>
+                {% csrf_token %}
+                
+                <!-- Profile Photo Section -->
+                <div class="form-section">
+                    <h4 class="fw-bold mb-4">
+                        <i class="bi bi-camera me-2 text-primary"></i>Profile Photo
+                    </h4>
+                    
+                    <div class="row align-items-center">
+                        <div class="col-md-4 text-center">
+                            <div class="profile-image-upload mx-auto mb-3" style="width: 200px;">
+                                {% if user_profile.profile_pic %}
+                                <img src="{{ user_profile.profile_pic.url }}" 
+                                     id="profileImagePreview" 
+                                     class="img-fluid rounded-circle border" 
+                                     style="width: 200px; height: 200px; object-fit: cover;">
+                                {% else %}
+                                <div id="profileImagePreview" 
+                                     class="rounded-circle bg-primary d-flex align-items-center justify-content-center border" 
+                                     style="width: 200px; height: 200px;">
+                                    <span class="text-white fs-1">{{ user.username|first|upper }}</span>
+                                </div>
+                                {% endif %}
+                                <div class="profile-image-overlay">
+                                    <i class="bi bi-camera text-white fs-1"></i>
+                                </div>
+                            </div>
+                            <input type="file" 
+                                   name="profile_pic" 
+                                   id="profileImageInput" 
+                                   accept="image/*" 
+                                   class="d-none">
+                            <label for="profileImageInput" class="btn btn-outline-primary">
+                                <i class="bi bi-upload me-2"></i>Upload Photo
+                            </label>
+                            <div class="mt-2">
+                                <small class="text-muted">JPEG, PNG, or GIF. Max 5MB.</small>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="alert alert-info border-0">
+                                <h6 class="alert-heading">
+                                    <i class="bi bi-lightbulb me-2"></i>Profile Photo Tips
+                                </h6>
+                                <ul class="mb-0">
+                                    <li>Use a clear, recent photo of yourself</li>
+                                    <li>Make sure your face is clearly visible</li>
+                                    <li>Avoid group photos or filters</li>
+                                    <li>Smile! It makes you more approachable</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Basic Information -->
+                <div class="form-section">
+                    <h4 class="fw-bold mb-4">
+                        <i class="bi bi-person me-2 text-primary"></i>Basic Information
+                    </h4>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Age *</label>
+                            <input type="number" 
+                                   name="age" 
+                                   class="form-control {% if form.age.errors %}is-invalid{% endif %}"
+                                   value="{{ form.age.value|default:user_profile.age }}"
+                                   min="18"
+                                   max="120"
+                                   required>
+                            {% if form.age.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.age.errors.0 }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Gender *</label>
+                            <select name="gender" 
+                                    class="form-select {% if form.gender.errors %}is-invalid{% endif %}"
+                                    required>
+                                <option value="">Select gender</option>
+                                <option value="M" {% if form.gender.value == 'M' or user_profile.gender == 'M' %}selected{% endif %}>Male</option>
+                                <option value="F" {% if form.gender.value == 'F' or user_profile.gender == 'F' %}selected{% endif %}>Female</option>
+                            </select>
+                            {% if form.gender.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.gender.errors.0 }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Sect</label>
+                            <select name="sect" class="form-select">
+                                <option value="">Select sect</option>
+                                <option value="Sunni" {% if form.sect.value == 'Sunni' or user_profile.sect == 'Sunni' %}selected{% endif %}>Sunni</option>
+                                <option value="Shia" {% if form.sect.value == 'Shia' or user_profile.sect == 'Shia' %}selected{% endif %}>Shia</option>
+                                <option value="Other" {% if form.sect.value == 'Other' or user_profile.sect == 'Other' %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Education Level</label>
+                            <select name="education" class="form-select">
+                                <option value="">Select education level</option>
+                                <option value="High School" {% if form.education.value == 'High School' or user_profile.education == 'High School' %}selected{% endif %}>High School</option>
+                                <option value="Bachelor" {% if form.education.value == 'Bachelor' or user_profile.education == 'Bachelor' %}selected{% endif %}>Bachelor's Degree</option>
+                                <option value="Master" {% if form.education.value == 'Master' or user_profile.education == 'Master' %}selected{% endif %}>Master's Degree</option>
+                                <option value="PhD" {% if form.education.value == 'PhD' or user_profile.education == 'PhD' %}selected{% endif %}>PhD</option>
+                                <option value="Other" {% if form.education.value == 'Other' or user_profile.education == 'Other' %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Location Information -->
+                <div class="form-section">
+                    <h4 class="fw-bold mb-4">
+                        <i class="bi bi-geo-alt me-2 text-primary"></i>Location Information
+                    </h4>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">City</label>
+                            <input type="text" 
+                                   name="city" 
+                                   class="form-control"
+                                   value="{{ form.city.value|default:user_profile.city }}"
+                                   placeholder="e.g., Karachi">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Country</label>
+                            <input type="text" 
+                                   name="country" 
+                                   class="form-control"
+                                   value="{{ form.country.value|default:user_profile.country }}"
+                                   placeholder="e.g., Pakistan">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Height (cm)</label>
+                            <input type="number" 
+                                   name="height_cm" 
+                                   class="form-control"
+                                   value="{{ form.height_cm.value|default:user_profile.height_cm }}"
+                                   placeholder="e.g., 175"
+                                   min="100"
+                                   max="250">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Occupation</label>
+                            <input type="text" 
+                                   name="occupation" 
+                                   class="form-control"
+                                   value="{{ form.occupation.value|default:user_profile.occupation }}"
+                                   placeholder="e.g., Software Engineer">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Religious Practice -->
+                <div class="form-section">
+                    <h4 class="fw-bold mb-4">
+                        <i class="bi bi-moon-stars me-2 text-primary"></i>Religious Practice
+                    </h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">Practice Level</label>
+                            <select name="practice_level" class="form-select">
+                                <option value="">Select practice level</option>
+                                <option value="Strict" {% if form.practice_level.value == 'Strict' or user_profile.practice_level == 'Strict' %}selected{% endif %}>Strict (5 daily prayers)</option>
+                                <option value="Moderate" {% if form.practice_level.value == 'Moderate' or user_profile.practice_level == 'Moderate' %}selected{% endif %}>Moderate</option>
+                                <option value="Casual" {% if form.practice_level.value == 'Casual' or user_profile.practice_level == 'Casual' %}selected{% endif %}>Casual</option>
+                            </select>
+                            <small class="text-muted">This helps match you with compatible partners</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bio and Preferences -->
+                <div class="form-section">
+                    <h4 class="fw-bold mb-4">
+                        <i class="bi bi-chat-left-text me-2 text-primary"></i>About You
+                    </h4>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Bio *</label>
+                        <textarea name="bio" 
+                                  class="form-control {% if form.bio.errors %}is-invalid{% endif %}" 
+                                  rows="4"
+                                  placeholder="Tell potential matches about yourself, your interests, values, and what you're looking for..."
+                                  required>{{ form.bio.value|default:user_profile.bio }}</textarea>
+                        {% if form.bio.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.bio.errors.0 }}
+                        </div>
+                        {% endif %}
+                        <small class="text-muted">Minimum 50 characters. Share what makes you unique.</small>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">What are you looking for? *</label>
+                        <textarea name="seeking" 
+                                  class="form-control" 
+                                  rows="3"
+                                  placeholder="e.g., Serious relationship, marriage, someone who shares my values...">{{ form.seeking.value|default:user_profile.seeking }}</textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="form-label">Your Interests & Preferences</label>
+                        <textarea name="preferences" 
+                                  class="form-control" 
+                                  rows="3"
+                                  placeholder="e.g., Reading, hiking, cooking, travel, sports (separate with commas)">{{ form.preferences.value|default:user_profile.preferences }}</textarea>
+                        <small class="text-muted">Separate interests with commas</small>
+                    </div>
+                </div>
+                
+                <!-- Privacy Settings -->
+                <div class="form-section">
+                    <h4 class="fw-bold mb-4">
+                        <i class="bi bi-shield me-2 text-primary"></i>Privacy Settings
+                    </h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       name="show_age" 
+                                       id="showAge"
+                                       {% if user_profile.show_age %}checked{% endif %}>
+                                <label class="form-check-label" for="showAge">
+                                    Show my age on profile
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       name="show_location" 
+                                       id="showLocation"
+                                       {% if user_profile.show_location %}checked{% endif %}>
+                                <label class="form-check-label" for="showLocation">
+                                    Show my location on profile
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Form Actions -->
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'dashboard:dashboard'%}?tab=profile" class="btn btn-outline-primary btn-lg">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg px-5">
+                        <i class="bi bi-check-circle me-2"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // Profile image upload preview
+        $('#profileImageInput').change(function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#profileImagePreview').attr('src', e.target.result);
+                    $('#profileImagePreview').removeClass('bg-primary').addClass('border');
+                    $('#profileImagePreview').find('span').remove();
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // Character count for bio
+        $('textarea[name="bio"]').on('input', function() {
+            const count = $(this).val().length;
+            $('.char-count').remove();
+            if (count < 50) {
+                $(this).after(`<small class="text-danger char-count">${count}/50 characters (minimum 50 required)</small>`);
+            } else {
+                $(this).after(`<small class="text-success char-count">${count} characters</small>`);
+            }
+        }).trigger('input');
+        
+        // Form submission
+        $('form').submit(function() {
+            const submitBtn = $(this).find('button[type="submit"]');
+            submitBtn.prop('disabled', true);
+            submitBtn.html(`
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                Saving...
+            `);
+        });
+    });
+</script>
+{% endblock %}

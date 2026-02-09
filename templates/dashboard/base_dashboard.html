@@ -1,0 +1,252 @@
+{% extends 'quizapp/base.html' %}
+
+{% block title %}Dashboard - Modern Match{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Timeline Layout */
+    .timeline-container {
+        display: flex;
+        gap: 20px;
+        max-width: 1200px;
+        margin: 20px auto;
+    }
+    
+    .main-content {
+        flex: 1;
+        min-width: 0;
+        min-height: 600px;
+    }
+    
+    .right-sidebar {
+        width: 320px;
+        flex-shrink: 0;
+    }
+    
+    /* Loading animation */
+    .content-loading {
+        text-align: center;
+        padding: 40px;
+    }
+    
+    /* Active tab styling */
+    .active-tab {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+    }
+    
+    /* Keep your existing styles for post cards, chat widget, etc. */
+    /* ... */
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <!-- Loading Indicator (hidden by default) -->
+    <div id="loadingIndicator" class="content-loading" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2 text-muted">Loading content...</p>
+    </div>
+
+    <!-- Timeline Layout -->
+    <div class="timeline-container">
+        <!-- Main Content Area (will be updated via AJAX) -->
+        <div class="main-content" id="mainContent">
+            {% include 'dashboard/timeline.html' %}
+        </div>
+        
+        <!-- Right Sidebar (static, won't change) -->
+        <div class="right-sidebar">
+            {% include 'dashboard/right_sidebar.html' %}
+        </div>
+    </div>
+</div>
+
+<!-- Chat Widget -->
+{% include 'dashboard/chat_widget.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Handle menu clicks - prevent default navigation
+        $('.navbar-nav .nav-link').on('click', function(e) {
+            e.preventDefault();
+            
+            const url = $(this).attr('href');
+            const tab = getTabFromUrl(url);
+            
+            // Update browser URL without reload
+            window.history.pushState({}, '', url);
+            
+            // Update active tab in navbar
+            updateActiveTab(tab);
+            
+            // Load content via AJAX
+            loadTabContent(tab);
+        });
+        
+        // Handle browser back/forward buttons
+        window.onpopstate = function(event) {
+            const url = window.location.href;
+            const tab = getTabFromUrl(url) || 'timeline';
+            updateActiveTab(tab);
+            loadTabContent(tab);
+        };
+        
+        // Extract tab from URL
+        function getTabFromUrl(url) {
+            const match = url.match(/[?&]tab=([^&]+)/);
+            return match ? match[1] : 'timeline';
+        }
+        
+        // Update active tab in navbar
+        function updateActiveTab(tab) {
+            // Remove active class from all tabs
+            $('.navbar-nav .nav-link').removeClass('active active-tab');
+            
+            // Add active class to current tab
+            $(`.navbar-nav .nav-link[href*="tab=${tab}"]`).addClass('active active-tab');
+            
+            // If tab not found, activate timeline
+            if ($('.navbar-nav .nav-link.active').length === 0) {
+                $(`.navbar-nav .nav-link[href*="tab=timeline"]`).addClass('active active-tab');
+            }
+        }
+        
+        // Load tab content via AJAX
+        function loadTabContent(tab) {
+            // Show loading indicator
+            $('#loadingIndicator').show();
+            $('#mainContent').hide();
+            
+            // Get current URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('tab', tab);
+            urlParams.set('ajax', '1'); // Add ajax parameter
+            
+            $.ajax({
+                url: '{% url "dashboard:dashboard" %}?' + urlParams.toString(),
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    // Hide loading indicator
+                    $('#loadingIndicator').hide();
+                    
+                    if (response.html) {
+                        // If response contains HTML for main content
+                        $('#mainContent').html(response.html).show();
+                    } else if (response.main_content) {
+                        // If response contains specific main_content
+                        $('#mainContent').html(response.main_content).show();
+                    } else {
+                        // If response is full HTML, extract main content
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(response, 'text/html');
+                        const mainContent = doc.querySelector('#mainContent') || 
+                                          doc.querySelector('.main-content') ||
+                                          doc.querySelector('.timeline-container .main-content');
+                        
+                        if (mainContent) {
+                            $('#mainContent').html(mainContent.innerHTML).show();
+                        } else {
+                            // Fallback: just show the response
+                            $('#mainContent').html(response).show();
+                        }
+                    }
+                    
+                    // Update page title if provided
+                    if (response.title) {
+                        document.title = response.title;
+                    }
+                    
+                    // Initialize any JS for the new content
+                    initializeContent();
+                },
+                error: function(xhr, status, error) {
+                    $('#loadingIndicator').hide();
+                    $('#mainContent').html(
+                        '<div class="alert alert-danger">Error loading content. Please try again.</div>'
+                    ).show();
+                    console.error('AJAX Error:', error);
+                }
+            });
+        }
+        
+        // Initialize content-specific JavaScript
+        function initializeContent() {
+            // Re-initialize any tooltips, modals, etc.
+            if (typeof $().tooltip === 'function') {
+                $('[data-bs-toggle="tooltip"]').tooltip();
+            }
+            
+            // Re-initialize any event listeners specific to content
+            // For example, like buttons, friend request buttons, etc.
+            initializeEventListeners();
+        }
+        
+        // Initialize event listeners for dynamic content
+        function initializeEventListeners() {
+            // Like button handlers
+            $('.like-btn').off('click').on('click', function(e) {
+                e.preventDefault();
+                const btn = $(this);
+                const url = btn.attr('href') || btn.data('url');
+                
+                if (url) {
+                    $.ajax({
+                        url: url,
+                        method: 'POST',
+                        headers: {'X-CSRFToken': '{{ csrf_token }}'},
+                        success: function(data) {
+                            if (data.success) {
+                                btn.html('<i class="bi bi-heart-fill me-1"></i>Liked');
+                                btn.removeClass('btn-primary').addClass('btn-success');
+                                btn.prop('disabled', true);
+                            }
+                        }
+                    });
+                }
+            });
+            
+            // Friend request button handlers
+            $('.friend-request-btn').off('click').on('click', function(e) {
+                e.preventDefault();
+                const form = $(this).closest('form');
+                const url = form.attr('action');
+                
+                $.ajax({
+                    url: url,
+                    method: 'POST',
+                    data: form.serialize(),
+                    headers: {'X-CSRFToken': '{{ csrf_token }}'},
+                    success: function(data) {
+                        if (data.success) {
+                            // Update UI based on response
+                            loadTabContent(getCurrentTab());
+                        }
+                    }
+                });
+            });
+            
+            // Add more event listeners as needed
+        }
+        
+        // Get current tab from URL
+        function getCurrentTab() {
+            return getTabFromUrl(window.location.href) || 'timeline';
+        }
+        
+        // Initialize on page load
+        const initialTab = getCurrentTab();
+        updateActiveTab(initialTab);
+        
+        // Don't load content on initial page load (it's already loaded)
+        // Only update the active tab styling
+    });
+</script>
+{% endblock %}

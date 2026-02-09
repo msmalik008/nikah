@@ -1,0 +1,786 @@
+<!-- dashboard/templates/dashboard/profile.html -->
+{% extends 'dashboard/base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Edit Profile{% endblock %}
+
+{% block extra_css %}
+<style>
+.profile-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 30px;
+    margin-bottom: 30px;
+}
+
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border: 5px solid white;
+}
+
+.profile-stats {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.stat-item {
+    text-align: center;
+    padding: 10px;
+}
+
+.stat-number {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #666;
+}
+
+.profile-tabs .nav-link {
+    color: #666;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 10px 20px;
+}
+
+.profile-tabs .nav-link.active {
+    color: #007bff;
+    background: none;
+    border-bottom: 3px solid #007bff;
+}
+
+.profile-section {
+    background: white;
+    border-radius: 10px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.section-title {
+    color: #333;
+    font-size: 18px;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.upload-area {
+    border: 2px dashed #ddd;
+    border-radius: 10px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.upload-area:hover {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+}
+
+.upload-area.dragover {
+    border-color: #007bff;
+    background-color: #e3f2fd;
+}
+
+.completion-meter {
+    height: 10px;
+    border-radius: 5px;
+    background-color: #e9ecef;
+    overflow: hidden;
+}
+
+.completion-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #28a745, #20c997);
+    transition: width 0.5s ease;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Profile Header -->
+<div class="profile-header">
+    <div class="row align-items-center">
+        <div class="col-md-2 text-center">
+            {% if profile.profile_pic %}
+            <img src="{{ profile.profile_pic.url }}" class="rounded-circle profile-avatar" alt="Profile">
+            {% else %}
+            <div class="rounded-circle bg-white d-inline-flex align-items-center justify-content-center profile-avatar">
+                <i class="fas fa-user text-primary fa-3x"></i>
+            </div>
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <h1 class="h3 mb-1">{{ request.user.get_full_name|default:request.user.username }}</h1>
+            <p class="mb-2">
+                <i class="fas fa-map-marker-alt"></i>
+                {% if profile.city and profile.country %}
+                    {{ profile.city }}, {{ profile.country }}
+                {% elif profile.city %}
+                    {{ profile.city }}
+                {% elif profile.country %}
+                    {{ profile.country }}
+                {% else %}
+                    Location not set
+                {% endif %}
+            </p>
+            <div class="d-flex flex-wrap gap-2">
+                {% if profile.gender %}
+                <span class="badge bg-primary">{{ profile.get_gender_display }}</span>
+                {% endif %}
+                {% if profile.age %}
+                <span class="badge bg-info">{{ profile.age }} years</span>
+                {% endif %}
+                {% if profile.sect %}
+                <span class="badge bg-success">{{ profile.sect }}</span>
+                {% endif %}
+                {% if profile.practice_level %}
+                <span class="badge bg-warning">{{ profile.get_practice_level_display }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="profile-stats">
+                <div class="row">
+                    <div class="col-6 stat-item">
+                        <div class="stat-number">{{ profile.get_profile_completion_percentage }}%</div>
+                        <div class="stat-label">Profile Complete</div>
+                    </div>
+                    <div class="col-6 stat-item">
+                        <div class="stat-number">{{ profile_views }}</div>
+                        <div class="stat-label">Profile Views</div>
+                    </div>
+                </div>
+                <div class="completion-meter mt-3">
+                    <div class="completion-fill" style="width: {{ profile.get_profile_completion_percentage }}%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Profile Tabs -->
+<ul class="nav nav-tabs profile-tabs mb-4" id="profileTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button">
+            <i class="fas fa-user"></i> Basic Info
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="about-tab" data-bs-toggle="tab" data-bs-target="#about" type="button">
+            <i class="fas fa-info-circle"></i> About Me
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="religious-tab" data-bs-toggle="tab" data-bs-target="#religious" type="button">
+            <i class="fas fa-pray"></i> Religious Info
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="preferences-tab" data-bs-toggle="tab" data-bs-target="#preferences" type="button">
+            <i class="fas fa-heart"></i> Preferences
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="photos-tab" data-bs-toggle="tab" data-bs-target="#photos" type="button">
+            <i class="fas fa-images"></i> Photos
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button">
+            <i class="fas fa-cog"></i> Settings
+        </button>
+    </li>
+</ul>
+
+<!-- Tab Content -->
+<div class="tab-content" id="profileTabContent">
+    <!-- Basic Info Tab -->
+    <div class="tab-pane fade show active" id="basic" role="tabpanel">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="profile-section">
+                <h3 class="section-title">Profile Picture</h3>
+                <div class="row align-items-center">
+                    <div class="col-md-3 text-center">
+                        {% if profile.profile_pic %}
+                        <img src="{{ profile.profile_pic.url }}" id="profilePreview" class="rounded-circle img-fluid mb-3" 
+                             style="width: 150px; height: 150px; object-fit: cover;">
+                        {% else %}
+                        <div id="profilePreview" class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-3" 
+                             style="width: 150px; height: 150px;">
+                            <i class="fas fa-user text-white fa-3x"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-9">
+                        <div class="upload-area" id="uploadArea">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                            <h5>Upload Profile Picture</h5>
+                            <p class="text-muted">Drag & drop or click to browse</p>
+                            <p class="small text-muted">Recommended: Square image, at least 400x400 pixels</p>
+                            <input type="file" id="profile_pic" name="profile_pic" accept="image/*" class="d-none">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <h3 class="section-title">Basic Information</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.first_name.id_for_label }}">First Name</label>
+                            {{ form.first_name|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.last_name.id_for_label }}">Last Name</label>
+                            {{ form.last_name|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.gender.id_for_label }}">Gender</label>
+                            {{ form.gender|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.date_of_birth.id_for_label }}">Date of Birth</label>
+                            {{ form.date_of_birth|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <h3 class="section-title">Location</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.city.id_for_label }}">City</label>
+                            {{ form.city|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.country.id_for_label }}">Country</label>
+                            {{ form.country|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-end">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- About Me Tab -->
+    <div class="tab-pane fade" id="about" role="tabpanel">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="profile-section">
+                <h3 class="section-title">About Me</h3>
+                <div class="form-group">
+                    <label for="{{ form.bio.id_for_label }}">Bio</label>
+                    {{ form.bio|as_crispy_field }}
+                    <small class="form-text text-muted">Tell people about yourself. What are your interests, hobbies, and goals?</small>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <h3 class="section-title">Education & Career</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.education.id_for_label }}">Education Level</label>
+                            {{ form.education|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.profession.id_for_label }}">Profession</label>
+                            {{ form.profession|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <h3 class="section-title">Interests & Hobbies</h3>
+                <div class="form-group">
+                    <label for="interests">Interests</label>
+                    <input type="text" class="form-control" id="interests" name="interests" 
+                           placeholder="Add interests (separate with commas)"
+                           value="{{ profile.preferences.interests|default:'' }}">
+                    <small class="form-text text-muted">E.g.: Reading, Traveling, Cooking, Sports</small>
+                </div>
+            </div>
+
+            <div class="text-end">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Religious Info Tab -->
+    <div class="tab-pane fade" id="religious" role="tabpanel">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="profile-section">
+                <h3 class="section-title">Religious Information</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.sect.id_for_label }}">Sect</label>
+                            {{ form.sect|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.practice_level.id_for_label }}">Practice Level</label>
+                            {{ form.practice_level|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <h3 class="section-title">Religious Practices</h3>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="prayer" name="prayer" 
+                                   {% if profile.preferences.prayer %}checked{% endif %}>
+                            <label class="form-check-label" for="prayer">
+                                Regular Prayer
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="fasting" name="fasting" 
+                                   {% if profile.preferences.fasting %}checked{% endif %}>
+                            <label class="form-check-label" for="fasting">
+                                Fasting in Ramadan
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="charity" name="charity" 
+                                   {% if profile.preferences.charity %}checked{% endif %}>
+                            <label class="form-check-label" for="charity">
+                                Regular Charity
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-end">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Preferences Tab -->
+    <div class="tab-pane fade" id="preferences" role="tabpanel">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="profile-section">
+                <h3 class="section-title">What I'm Looking For</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="looking_for_gender">Gender</label>
+                            <select class="form-control" id="looking_for_gender" name="looking_for_gender">
+                                <option value="">Any</option>
+                                <option value="M" {% if profile.preferences.looking_for_gender == 'M' %}selected{% endif %}>Male</option>
+                                <option value="F" {% if profile.preferences.looking_for_gender == 'F' %}selected{% endif %}>Female</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="age_range">Age Range</label>
+                            <div class="row">
+                                <div class="col">
+                                    <input type="number" class="form-control" id="min_age" name="min_age" 
+                                           placeholder="Min" min="18" max="100"
+                                           value="{{ profile.preferences.min_age|default:'' }}">
+                                </div>
+                                <div class="col">
+                                    <input type="number" class="form-control" id="max_age" name="max_age" 
+                                           placeholder="Max" min="18" max="100"
+                                           value="{{ profile.preferences.max_age|default:'' }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="preferred_sect">Preferred Sect</label>
+                            <select class="form-control" id="preferred_sect" name="preferred_sect">
+                                <option value="">Any</option>
+                                <option value="Sunni" {% if profile.preferences.preferred_sect == 'Sunni' %}selected{% endif %}>Sunni</option>
+                                <option value="Shia" {% if profile.preferences.preferred_sect == 'Shia' %}selected{% endif %}>Shia</option>
+                                <!-- Add other sects -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="preferred_practice_level">Preferred Practice Level</label>
+                            <select class="form-control" id="preferred_practice_level" name="preferred_practice_level">
+                                <option value="">Any</option>
+                                <option value="B" {% if profile.preferences.preferred_practice_level == 'B' %}selected{% endif %}>Beginner</option>
+                                <option value="I" {% if profile.preferences.preferred_practice_level == 'I' %}selected{% endif %}>Intermediate</option>
+                                <option value="A" {% if profile.preferences.preferred_practice_level == 'A' %}selected{% endif %}>Advanced</option>
+                                <option value="E" {% if profile.preferences.preferred_practice_level == 'E' %}selected{% endif %}>Expert</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <h3 class="section-title">Relationship Preferences</h3>
+                <div class="form-group">
+                    <label for="relationship_goal">Relationship Goal</label>
+                    <select class="form-control" id="relationship_goal" name="relationship_goal">
+                        <option value="">Select...</option>
+                        <option value="marriage" {% if profile.preferences.relationship_goal == 'marriage' %}selected{% endif %}>Marriage</option>
+                        <option value="serious_relationship" {% if profile.preferences.relationship_goal == 'serious_relationship' %}selected{% endif %}>Serious Relationship</option>
+                        <option value="friendship" {% if profile.preferences.relationship_goal == 'friendship' %}selected{% endif %}>Friendship</option>
+                        <option value="not_sure" {% if profile.preferences.relationship_goal == 'not_sure' %}selected{% endif %}>Not Sure Yet</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="text-end">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-save"></i> Save Preferences
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Photos Tab -->
+    <div class="tab-pane fade" id="photos" role="tabpanel">
+        <div class="profile-section">
+            <h3 class="section-title">Your Photos</h3>
+            
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="upload-area" id="photoUploadArea">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                        <h5>Upload New Photo</h5>
+                        <p class="text-muted">Drag & drop or click to browse</p>
+                        <input type="file" id="new_photos" name="new_photos" accept="image/*" multiple class="d-none">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row" id="photoGallery">
+                <!-- Profile Picture -->
+                <div class="col-md-3 mb-4">
+                    <div class="card">
+                        {% if profile.profile_pic %}
+                        <img src="{{ profile.profile_pic.url }}" class="card-img-top" alt="Profile" style="height: 150px; object-fit: cover;">
+                        {% else %}
+                        <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 150px;">
+                            <i class="fas fa-user text-white fa-3x"></i>
+                        </div>
+                        {% endif %}
+                        <div class="card-body text-center">
+                            <span class="badge bg-primary">Profile Picture</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Additional photos will be loaded here -->
+            </div>
+        </div>
+
+        <div class="profile-section">
+            <h3 class="section-title">Photo Settings</h3>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="show_photos" name="show_photos" checked>
+                <label class="form-check-label" for="show_photos">
+                    Show my photos to other users
+                </label>
+            </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="allow_download" name="allow_download">
+                <label class="form-check-label" for="allow_download">
+                    Allow other users to download my photos
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="tab-pane fade" id="settings" role="tabpanel">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="profile-section">
+                <h3 class="section-title">Privacy Settings</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check mb-3">
+                            {{ form.is_visible|as_crispy_field }}
+                            <small class="form-text text-muted">When disabled, your profile won't appear in search results</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check mb-3">
+                            {{ form.show_age|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check mb-3">
+                            {{ form.show_location|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check mb-3">
+                            {{ form.show_sect|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <h3 class="section-title">Notification Settings</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="notify_likes" name="notify_likes" checked>
+                            <label class="form-check-label" for="notify_likes">
+                                Notify me when someone likes my profile
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="notify_matches" name="notify_matches" checked>
+                            <label class="form-check-label" for="notify_matches">
+                                Notify me of new matches
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="notify_messages" name="notify_messages" checked>
+                            <label class="form-check-label" for="notify_messages">
+                                Notify me of new messages
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="email_notifications" name="email_notifications" checked>
+                            <label class="form-check-label" for="email_notifications">
+                                Receive email notifications
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-end">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-save"></i> Save Settings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Profile picture upload
+    $('#uploadArea').click(function() {
+        $('#profile_pic').click();
+    });
+    
+    $('#profile_pic').change(function(e) {
+        if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                $('#profilePreview').attr('src', e.target.result);
+                $('#profilePreview').removeClass('bg-secondary');
+                $('#profilePreview').find('i').remove();
+            }
+            reader.readAsDataURL(this.files[0]);
+        }
+    });
+    
+    // Drag and drop for profile picture
+    $('#uploadArea').on('dragover', function(e) {
+        e.preventDefault();
+        $(this).addClass('dragover');
+    });
+    
+    $('#uploadArea').on('dragleave', function(e) {
+        e.preventDefault();
+        $(this).removeClass('dragover');
+    });
+    
+    $('#uploadArea').on('drop', function(e) {
+        e.preventDefault();
+        $(this).removeClass('dragover');
+        const files = e.originalEvent.dataTransfer.files;
+        if (files.length > 0) {
+            $('#profile_pic').prop('files', files);
+            $('#profile_pic').trigger('change');
+        }
+    });
+    
+    // Photo upload
+    $('#photoUploadArea').click(function() {
+        $('#new_photos').click();
+    });
+    
+    $('#new_photos').change(function(e) {
+        if (this.files) {
+            Array.from(this.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const photoHtml = `
+                    <div class="col-md-3 mb-4">
+                        <div class="card">
+                            <img src="${e.target.result}" class="card-img-top" style="height: 150px; object-fit: cover;">
+                            <div class="card-body text-center">
+                                <button class="btn btn-danger btn-sm remove-photo-btn">
+                                    <i class="fas fa-trash"></i> Remove
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                    $('#photoGallery').append(photoHtml);
+                }
+                reader.readAsDataURL(file);
+            });
+        }
+    });
+    
+    // Remove photo
+    $(document).on('click', '.remove-photo-btn', function() {
+        if (confirm('Are you sure you want to remove this photo?')) {
+            $(this).closest('.col-md-3').remove();
+        }
+    });
+    
+    // Form submission with AJAX
+    $('form').submit(function(e) {
+        e.preventDefault();
+        const form = $(this);
+        const formData = new FormData(form[0]);
+        const url = form.attr('action') || window.location.pathname;
+        
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    showToast('Profile updated successfully!', 'success');
+                    // Update profile completion if needed
+                    if (response.completion_percentage) {
+                        $('.stat-number').first().text(response.completion_percentage + '%');
+                        $('.completion-fill').css('width', response.completion_percentage + '%');
+                    }
+                } else {
+                    showToast(response.message || 'Failed to update profile', 'danger');
+                }
+            },
+            error: function() {
+                showToast('An error occurred. Please try again.', 'danger');
+            }
+        });
+    });
+    
+    // Tab switching with save confirmation
+    $('.nav-link').click(function(e) {
+        if ($(this).hasClass('active')) return;
+        
+        const currentTab = $('.tab-pane.active');
+        const form = currentTab.find('form');
+        
+        if (form.length && form[0].checkValidity()) {
+            // Form has changes, ask to save
+            if (confirm('You have unsaved changes. Save before switching tabs?')) {
+                form.submit();
+                return false;
+            }
+        }
+    });
+    
+    function showToast(message, type) {
+        const toast = $(`<div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>`);
+        
+        $('.toast-container').append(toast);
+        const bsToast = new bootstrap.Toast(toast[0]);
+        bsToast.show();
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}

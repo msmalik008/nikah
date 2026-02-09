@@ -1,0 +1,826 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}SoulMate - Find Your Perfect Life Partner{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Landing Page Specific Styles */
+    .landing-hero {
+        min-height: 100vh;
+        background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.9)),
+                    url('https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2069&q=80');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        padding-top: 100px;
+        position: relative;
+    }
+    
+    .hero-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at 20% 50%, rgba(156, 39, 176, 0.15) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 20%, rgba(255, 152, 0, 0.1) 0%, transparent 50%);
+        pointer-events: none;
+    }
+    
+    .hero-content {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .hero-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 4rem;
+        font-weight: 700;
+        line-height: 1.1;
+        margin-bottom: 1.5rem;
+        background: linear-gradient(45deg, #fff, var(--secondary-color));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.3rem;
+        color: var(--text-muted);
+        margin-bottom: 2.5rem;
+        max-width: 600px;
+    }
+    
+    .stats-container {
+        display: flex;
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--secondary-color);
+        display: block;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .preferences-card {
+        background: var(--card-bg);
+        backdrop-filter: blur(20px);
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 2.5rem;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+    
+    .card-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 2rem;
+        margin-bottom: 2rem;
+        color: var(--text-light);
+        text-align: center;
+    }
+    
+    .form-label {
+        color: var(--text-light);
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control-lg, .form-select-lg {
+        background: rgba(0, 0, 0, 0.5) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: var(--text-light) !important;
+        padding: 0.75rem 1rem !important;
+        border-radius: 10px !important;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+    }
+    
+    .form-control-lg:focus, .form-select-lg:focus {
+        background: rgba(0, 0, 0, 0.7) !important;
+        border-color: var(--primary-color) !important;
+        box-shadow: 0 0 0 0.25rem rgba(156, 39, 176, 0.25) !important;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .app-download {
+        text-align: center;
+        margin-top: 3rem;
+        padding-top: 2rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .download-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .btn-app {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: var(--text-light);
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-app:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
+    }
+    
+    .app-icon {
+        font-size: 1.5rem;
+    }
+    
+    .app-text small {
+        display: block;
+        font-size: 0.8rem;
+        opacity: 0.8;
+    }
+    
+    .features-section {
+        padding: 6rem 0;
+        background: rgba(10, 10, 10, 0.95);
+    }
+    
+    .feature-card {
+        background: var(--card-bg);
+        border-radius: 15px;
+        padding: 2rem;
+        text-align: center;
+        height: 100%;
+        transition: transform 0.3s ease;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-10px);
+    }
+    
+    .feature-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+    }
+    
+    .feature-icon i {
+        font-size: 2rem;
+        color: white;
+    }
+    
+    .how-it-works {
+        padding: 6rem 0;
+        background: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.95)),
+                    url('https://images.unsplash.com/photo-1519657337289-077653f724a5?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');
+        background-size: cover;
+        background-attachment: fixed;
+        position: relative;
+    }
+    
+    .how-it-works::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at 50% 50%, rgba(156, 39, 176, 0.1) 0%, transparent 70%);
+    }
+    
+    .step-card {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        padding: 2rem;
+        text-align: center;
+        position: relative;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .step-number {
+        position: absolute;
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 40px;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+    
+    .testimonials-section {
+        padding: 6rem 0;
+    }
+    
+    .testimonial-card {
+        background: var(--card-bg);
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .testimonial-content {
+        position: relative;
+        padding-left: 1.5rem;
+    }
+    
+    .testimonial-content::before {
+        content: '"';
+        position: absolute;
+        left: 0;
+        top: -10px;
+        font-size: 3rem;
+        color: var(--primary-color);
+        font-family: 'Playfair Display', serif;
+    }
+    
+    .cta-section {
+        padding: 6rem 0;
+        background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+        text-align: center;
+    }
+    
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2.5rem;
+        }
+        
+        .stats-container {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .preferences-card {
+            padding: 1.5rem;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+        }
+        
+        .download-buttons {
+            flex-direction: column;
+            align-items: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="landing-hero">
+    <div class="hero-overlay"></div>
+    <div class="container hero-content">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="hero-title">
+                    Find Your Perfect<br>Life Partner
+                </h1>
+                <p class="hero-subtitle">
+                    Join thousands of successful matches and start your journey 
+                    to a meaningful relationship. Our intelligent matching system 
+                    connects compatible souls based on shared values and interests.
+                </p>
+                
+                <div class="stats-container">
+                    <div class="stat-item">
+                        <span class="stat-number">{{ total_users|default:"10000"|add:"0"|stringformat:"d" }}+</span>
+                        <span class="stat-label">Active Members</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">{{ success_stories }}+</span>
+                        <span class="stat-label">Success Stories</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">98%</span>
+                        <span class="stat-label">Satisfaction Rate</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6">
+                <div class="preferences-card">
+                    <h2 class="card-title">
+                        <i class="fas fa-heart me-2"></i>Find Your Match
+                    </h2>
+                    
+                    <form method="POST" action="{% url 'accounts:home' %}" id="preferencesForm">
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <strong>Please correct the errors below:</strong>
+                            <ul class="mb-0 mt-1">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li>{{ field.label }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="row g-3">
+                            <!-- Basic Information -->
+                            <div class="col-md-6">
+                                <label for="{{ form.age.id_for_label }}" class="form-label">
+                                    <i class="fas fa-birthday-cake me-1"></i>Your Age
+                                </label>
+                                {{ form.age }}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.gender.id_for_label }}" class="form-label">
+                                    <i class="fas fa-user me-1"></i>Gender
+                                </label>
+                                {{ form.gender }}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.looking_for.id_for_label }}" class="form-label">
+                                    <i class="fas fa-search me-1"></i>Looking For
+                                </label>
+                                {{ form.looking_for }}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.marital_status.id_for_label }}" class="form-label">
+                                    <i class="fas fa-ring me-1"></i>Marital Status
+                                </label>
+                                {{ form.marital_status }}
+                            </div>
+                            
+                            <!-- Location -->
+                            <div class="col-md-6">
+                                <label for="{{ form.country.id_for_label }}" class="form-label">
+                                    <i class="fas fa-globe me-1"></i>Country
+                                </label>
+                                {{ form.country }}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.city.id_for_label }}" class="form-label">
+                                    <i class="fas fa-city me-1"></i>City
+                                </label>
+                                {{ form.city }}
+                            </div>
+                            
+                            <!-- Religious Information -->
+                            <div class="col-md-6">
+                                <label for="{{ form.sect.id_for_label }}" class="form-label">
+                                    <i class="fas fa-pray me-1"></i>Religious Sect
+                                </label>
+                                {{ form.sect }}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.religious_commitment.id_for_label }}" class="form-label">
+                                    <i class="fas fa-star me-1"></i>Religious Commitment
+                                </label>
+                                {{ form.religious_commitment }}
+                            </div>
+                            
+                            <!-- Terms Agreement -->
+                            <div class="col-12">
+                                <div class="form-check mt-3">
+                                    {{ form.terms_agreed }}
+                                    <label class="form-check-label ms-2" for="{{ form.terms_agreed.id_for_label }}">
+                                        I agree to the <a href="#" class="text-primary">Terms of Service</a> 
+                                        and <a href="#" class="text-primary">Privacy Policy</a>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn btn-primary btn-lg w-100 mt-4">
+                            <i class="fas fa-arrow-right me-2"></i>Find My Match
+                        </button>
+                        
+                        <!-- Alternative Actions -->
+                        <div class="action-buttons">
+                            <a href="{% url 'accounts:login' %}" class="btn btn-outline-light flex-grow-1">
+                                <i class="fas fa-sign-in-alt me-1"></i> Already have an account? Sign In
+                            </a>
+                        </div>
+                    </form>
+                    
+                    <!-- App Download Section -->
+                    <div class="app-download">
+                        <p class="text-muted mb-2">
+                            <i class="fas fa-mobile-alt me-1"></i> 
+                            Also available on mobile
+                        </p>
+                        <div class="download-buttons">
+                            <a href="{{ android_app_url }}" class="btn-app" target="_blank">
+                                <i class="fab fa-google-play app-icon"></i>
+                                <div class="app-text">
+                                    <span>GET IT ON</span>
+                                    <small>Google Play</small>
+                                </div>
+                            </a>
+                            <a href="{{ ios_app_url }}" class="btn-app" target="_blank">
+                                <i class="fab fa-apple app-icon"></i>
+                                <div class="app-text">
+                                    <span>Download on the</span>
+                                    <small>App Store</small>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-4 mb-3">Why Choose SoulMate?</h2>
+            <p class="lead text-muted">Our unique approach to matchmaking sets us apart</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-lg-4 col-md-6">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h4>Intelligent Matching</h4>
+                    <p class="text-muted">
+                        Our advanced algorithm considers values, interests, and compatibility 
+                        factors to find your perfect match.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 col-md-6">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h4>Secure & Private</h4>
+                    <p class="text-muted">
+                        Your privacy is our priority. We use end-to-end encryption and give you 
+                        full control over your data.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 col-md-6">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h4>Quality Community</h4>
+                    <p class="text-muted">
+                        Join a community of serious individuals looking for meaningful 
+                        relationships and lifelong partnerships.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 col-md-6">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h4>Guided Communication</h4>
+                    <p class="text-muted">
+                        Break the ice with conversation starters and get guidance on building 
+                        meaningful connections.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 col-md-6">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h4>Verified Profiles</h4>
+                    <p class="text-muted">
+                        All profiles are verified to ensure authenticity and create a safe 
+                        environment for everyone.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 col-md-6">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <h4>24/7 Support</h4>
+                    <p class="text-muted">
+                        Our dedicated support team is always here to help you with any questions 
+                        or concerns.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works Section -->
+<section class="how-it-works">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-4 mb-3 text-white">How It Works</h2>
+            <p class="lead text-light">Find your perfect match in just four simple steps</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <i class="fas fa-user-plus fa-3x text-primary mb-3"></i>
+                    <h4>Create Profile</h4>
+                    <p class="text-muted">Tell us about yourself and what you're looking for</p>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6">
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <i class="fas fa-heart fa-3x text-primary mb-3"></i>
+                    <h4>Get Matches</h4>
+                    <p class="text-muted">Receive compatible match suggestions daily</p>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6">
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <i class="fas fa-comments fa-3x text-primary mb-3"></i>
+                    <h4>Start Chatting</h4>
+                    <p class="text-muted">Connect with matches through secure messaging</p>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6">
+                <div class="step-card">
+                    <div class="step-number">4</div>
+                    <i class="fas fa-ring fa-3x text-primary mb-3"></i>
+                    <h4>Meet & Connect</h4>
+                    <p class="text-muted">Take the next step in your relationship journey</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials Section -->
+<section class="testimonials-section">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-4 mb-3">Success Stories</h2>
+            <p class="lead text-muted">Real couples who found love through SoulMate</p>
+            <a href="{% url 'accounts:success_stories' %}" class="btn btn-outline-primary mt-2">
+                <i class="fas fa-heart me-1"></i> View All Stories
+            </a>
+        </div>
+        
+        <div class="row">
+            <div class="col-lg-4 mb-4">
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <p class="mb-3">"We were matched based on our shared values and interests. The compatibility system really works!"</p>
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center" 
+                                 style="width: 50px; height: 50px; margin-right: 1rem;">
+                                <i class="fas fa-user text-white"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Ahmed & Sarah</h6>
+                                <small class="text-muted">Married for 2 years</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 mb-4">
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <p class="mb-3">"As practicing Muslims, it was important for us to find someone who shared our values. SoulMate made it easy."</p>
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center" 
+                                 style="width: 50px; height: 50px; margin-right: 1rem;">
+                                <i class="fas fa-user text-white"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Mohammed & Fatima</h6>
+                                <small class="text-muted">Engaged</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 mb-4">
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <p class="mb-3">"The privacy controls and verification system gave us confidence in the platform. We're so grateful we found each other!"</p>
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center" 
+                                 style="width: 50px; height: 50px; margin-right: 1rem;">
+                                <i class="fas fa-user text-white"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Omar & Aisha</h6>
+                                <small class="text-muted">Married for 1 year</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+    <div class="container">
+        <h2 class="display-4 text-white mb-4">Ready to Find Your Perfect Match?</h2>
+        <p class="lead text-light mb-4">
+            Join thousands of singles who have found meaningful relationships through SoulMate
+        </p>
+        <a href="#preferencesForm" class="btn btn-light btn-lg">
+            <i class="fas fa-heart me-2"></i> Start Your Journey Today
+        </a>
+    </div>
+</section>
+
+<script>
+    // Form validation and enhancement
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('preferencesForm');
+        
+        // Add loading state to submit button
+        form.addEventListener('submit', function() {
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Finding Matches...';
+            submitBtn.disabled = true;
+        });
+        
+        // Real-time form validation
+        const ageInput = document.getElementById('{{ form.age.id_for_label }}');
+        const genderSelect = document.getElementById('{{ form.gender.id_for_label }}');
+        const lookingForSelect = document.getElementById('{{ form.looking_for.id_for_label }}');
+        
+        function validateGenderCombination() {
+            const gender = genderSelect.value;
+            const lookingFor = lookingForSelect.value;
+            
+            if (gender && lookingFor && gender === lookingFor && lookingFor !== 'B') {
+                // Show warning for same gender preference
+                const warningDiv = document.createElement('div');
+                warningDiv.className = 'alert alert-warning mt-2';
+                warningDiv.innerHTML = `
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    If you're looking for someone of the same gender, please select 'Both' in the 'Looking for' field.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                
+                // Remove existing warning
+                const existingWarning = form.querySelector('.alert-warning');
+                if (existingWarning) {
+                    existingWarning.remove();
+                }
+                
+                form.querySelector('.row').before(warningDiv);
+            } else {
+                // Remove warning if it exists
+                const existingWarning = form.querySelector('.alert-warning');
+                if (existingWarning) {
+                    existingWarning.remove();
+                }
+            }
+        }
+        
+        // Validate age
+        if (ageInput) {
+            ageInput.addEventListener('change', function() {
+                const age = parseInt(this.value);
+                if (age < 18) {
+                    this.setCustomValidity('You must be at least 18 years old');
+                } else if (age > 120) {
+                    this.setCustomValidity('Please enter a valid age');
+                } else {
+                    this.setCustomValidity('');
+                }
+            });
+        }
+        
+        // Validate gender combination
+        if (genderSelect && lookingForSelect) {
+            genderSelect.addEventListener('change', validateGenderCombination);
+            lookingForSelect.addEventListener('change', validateGenderCombination);
+        }
+        
+        // Auto-fill city/country based on IP (example)
+        function detectLocation() {
+            // This is a simplified example. In production, you'd use a geolocation API
+            const cityField = document.getElementById('{{ form.city.id_for_label }}');
+            const countryField = document.getElementById('{{ form.country.id_for_label }}');
+            
+            if (!cityField.value && !countryField.value) {
+                // You could integrate with an IP geolocation service here
+                // For now, we'll just show a button
+                const locationBtn = document.createElement('button');
+                locationBtn.type = 'button';
+                locationBtn.className = 'btn btn-sm btn-outline-info mt-1';
+                locationBtn.innerHTML = '<i class="fas fa-location-arrow me-1"></i> Detect my location';
+                locationBtn.onclick = function() {
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(function(position) {
+                            // This would call your backend to get city/country from coordinates
+                            console.log('Location detected:', position.coords);
+                        });
+                    }
+                };
+                
+                if (cityField.parentNode) {
+                    cityField.parentNode.appendChild(locationBtn);
+                }
+            }
+        }
+        
+        // Detect location on page load
+        detectLocation();
+        
+        // Smooth scroll for CTA button
+        const ctaButton = document.querySelector('a[href="#preferencesForm"]');
+        if (ctaButton) {
+            ctaButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                const formElement = document.getElementById('preferencesForm');
+                if (formElement) {
+                    formElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        }
+        
+        // Animate stats counters
+        const statNumbers = document.querySelectorAll('.stat-number');
+        statNumbers.forEach(stat => {
+            const target = parseInt(stat.textContent);
+            let current = 0;
+            const increment = target / 50;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    stat.textContent = target + '+';
+                    clearInterval(timer);
+                } else {
+                    stat.textContent = Math.floor(current) + '+';
+                }
+            }, 30);
+        });
+    });
+</script>
+{% endblock %}

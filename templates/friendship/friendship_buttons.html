@@ -1,0 +1,102 @@
+{% load friendship_tags %}
+
+{% if relationship %}
+    {% if relationship.status == 'friends' %}
+        <button class="btn btn-success btn-sm" disabled>
+            <i class="bi bi-check-circle me-1"></i>Friends
+        </button>
+        <form method="post" action="{% url 'friendship:remove_friend' target_user.id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-person-dash"></i>
+            </button>
+        </form>
+    
+    {% elif relationship.status == 'pending_sender' %}
+        <button class="btn btn-secondary btn-sm" disabled>
+            <i class="bi bi-clock me-1"></i>Request Sent
+        </button>
+        <form method="post" action="{% url 'friendship:cancel_friend_request' target_user.id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-x-circle"></i>
+            </button>
+        </form>
+    
+    {% elif relationship.status == 'pending_receiver' %}
+        <form method="post" action="{% url 'friendship:accept_friend_request' target_user.id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success btn-sm">
+                <i class="bi bi-check me-1"></i>Accept
+            </button>
+        </form>
+        <form method="post" action="{% url 'friendship:reject_friend_request' target_user.id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-sm">
+                <i class="bi bi-x"></i>Reject
+            </button>
+        </form>
+    
+    {% elif relationship.status == 'rejected_by_b' %}
+        <button class="btn btn-danger btn-sm" disabled>
+            <i class="bi bi-x-circle me-1"></i>Rejected
+        </button>
+    
+    {% elif relationship.status == 'rejected_by_a' %}
+        <button class="btn btn-warning btn-sm" disabled>
+            <i class="bi bi-slash-circle me-1"></i>You Rejected
+        </button>
+        <form method="post" action="{% url 'friendship:withdraw_rejection' target_user.id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-warning btn-sm">
+                <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+        </form>
+    
+    {% elif relationship.status == 'blocked_by_a' %}
+        <button class="btn btn-dark btn-sm" disabled>
+            <i class="bi bi-shield-slash me-1"></i>Blocked
+        </button>
+        <form method="post" action="{% url 'friendship:unblock_user' target_user.id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-dark btn-sm">
+                <i class="bi bi-unlock"></i>
+            </button>
+        </form>
+    
+    {% elif relationship.status == 'blocked_by_b' %}
+        <button class="btn btn-dark btn-sm" disabled>
+            <i class="bi bi-shield-fill-exclamation me-1"></i>You Are Blocked
+        </button>
+    
+    {% elif relationship.status in 'unfriended_by_a,unfriended_by_b' %}
+        {% if can_send_request %}
+        <form method="post" action="{% url 'friendship:send_friend_request' target_user.id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-person-plus me-1"></i>Add Friend
+            </button>
+        </form>
+        {% else %}
+        <button class="btn btn-secondary btn-sm" disabled>
+            <i class="bi bi-person me-1"></i>Unfriended
+        </button>
+        {% endif %}
+    
+    {% elif relationship.status == 'strangers' %}
+        <form method="post" action="{% url 'friendship:send_friend_request' target_user.id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-person-plus me-1"></i>Add Friend
+            </button>
+        </form>
+    {% endif %}
+
+{% else %}
+    <form method="post" action="{% url 'friendship:send_friend_request' target_user.id %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-person-plus me-1"></i>Add Friend
+        </button>
+    </form>
+{% endif %}

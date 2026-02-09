@@ -1,0 +1,23 @@
+<!-- dashboard/templates/dashboard/partials/breadcrumb.html -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard:dashboard' %}">Dashboard</a></li>
+        {% if active_tab == 'timeline' %}
+        <li class="breadcrumb-item active" aria-current="page">Timeline</li>
+        {% elif active_tab == 'discover' %}
+        <li class="breadcrumb-item active" aria-current="page">Discover</li>
+        {% elif active_tab == 'matches' %}
+        <li class="breadcrumb-item active" aria-current="page">Matches</li>
+        {% elif active_tab == 'messages' %}
+        <li class="breadcrumb-item active" aria-current="page">Messages</li>
+        {% elif active_tab == 'friends' %}
+        <li class="breadcrumb-item active" aria-current="page">Friends</li>
+        {% elif active_tab == 'profile' %}
+        <li class="breadcrumb-item active" aria-current="page">Profile</li>
+        {% elif active_tab == 'settings' %}
+        <li class="breadcrumb-item active" aria-current="page">Settings</li>
+        {% elif active_tab == 'notifications' %}
+        <li class="breadcrumb-item active" aria-current="page">Notifications</li>
+        {% endif %}
+    </ol>
+</nav>

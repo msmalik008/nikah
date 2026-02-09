@@ -1,0 +1,74 @@
+<!-- Online Friends -->
+{% if online_friends %}
+<div class="mb-3">
+    <small class="text-success fw-bold d-block mb-2">
+        <i class="bi bi-circle-fill me-1"></i> Online ({{ online_friends|length }})
+    </small>
+    {% for friend in online_friends %}
+    <div class="friend-item" onclick="startChat({{ friend.id }})">
+        <div class="position-relative">
+            {% if friend.profile_pic %}
+            <img src="{{ friend.profile_pic }}" 
+                 class="rounded-circle" 
+                 style="width: 40px; height: 40px; object-fit: cover;">
+            {% else %}
+            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" 
+                 style="width: 40px; height: 40px;">
+                {{ friend.username|first|upper }}
+            </div>
+            {% endif %}
+            <span class="online-dot"></span>
+        </div>
+        <div class="flex-grow-1">
+            <h6 class="mb-0 small">{{ friend.full_name|default:friend.username }}</h6>
+            <small class="text-success">Online</small>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Offline Friends -->
+{% if offline_friends %}
+<div>
+    <small class="text-muted fw-bold d-block mb-2">
+        <i class="bi bi-circle me-1"></i> Offline ({{ offline_friends|length }})
+    </small>
+    {% for friend in offline_friends %}
+    <div class="friend-item" onclick="startChat({{ friend.id }})">
+        <div class="position-relative">
+            {% if friend.profile_pic %}
+            <img src="{{ friend.profile_pic }}" 
+                 class="rounded-circle" 
+                 style="width: 40px; height: 40px; object-fit: cover;">
+            {% else %}
+            <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" 
+                 style="width: 40px; height: 40px;">
+                {{ friend.username|first|upper }}
+            </div>
+            {% endif %}
+        </div>
+        <div class="flex-grow-1">
+            <h6 class="mb-0 small">{{ friend.full_name|default:friend.username }}</h6>
+            <small class="text-muted">
+                {% if friend.last_seen %}
+                Last seen {{ friend.last_seen|timesince }} ago
+                {% else %}
+                Offline
+                {% endif %}
+            </small>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if not online_friends and not offline_friends %}
+<div class="text-center py-4">
+    <i class="bi bi-people display-4 text-muted mb-3"></i>
+    <p class="text-muted">No friends yet</p>
+    <a href="?tab=discover" class="btn btn-sm btn-outline-primary">
+        Discover People
+    </a>
+</div>
+{% endif %}

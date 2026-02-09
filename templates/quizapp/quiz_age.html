@@ -1,0 +1,137 @@
+{% extends 'quizapp/base.html' %}
+
+{% block title %}Quiz - Age{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Progress Bar -->
+            <div class="mb-5">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted">Step {{ progress }} of {{ total_steps }}</span>
+                    <span class="fw-bold">{{ progress_percentage|default:0 }}%</span>
+                </div>
+                <div class="progress" style="height: 10px;">
+                    <div class="progress-bar progress-bar-custom" 
+                         style="width: {{ progress_percentage|default:0 }}%"></div>
+                </div>
+            </div>
+            
+            <!-- Quiz Card -->
+            <div class="card border-0 shadow-soft rounded-xxl overflow-hidden">
+                <div class="card-body p-4 p-md-5">
+                    <!-- Step Header -->
+                    <div class="text-center mb-4">
+                        <div class="mb-3">
+                            <i class="bi bi-calendar2-heart fs-1 text-primary"></i>
+                        </div>
+                        <h2 class="fw-bold mb-2">What's Your Age?</h2>
+                        <p class="text-muted">This helps us find compatible matches in your age range</p>
+                    </div>
+                    
+                    <!-- Form -->
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <div class="text-center mb-3">
+                                <label class="form-label fs-5 fw-bold">Select your age:</label>
+                            </div>
+                            
+                            <div class="row justify-content-center">
+                                <div class="col-md-6">
+                                    <div class="input-group input-group-lg">
+                                        <input type="number" 
+                                               name="age" 
+                                               id="id_age"
+                                               class="form-control form-control-lg text-center {% if form.age.errors %}is-invalid{% endif %}"
+                                               placeholder="e.g., 25"
+                                               min="18"
+                                               max="120"
+                                               value="{{ form.age.value|default:'' }}"
+                                               required
+                                               autofocus>
+                                        <span class="input-group-text">years</span>
+                                    </div>
+                                    {% if form.age.errors %}
+                                    <div class="invalid-feedback d-block text-center">
+                                        {{ form.age.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div class="mt-3 text-center">
+                                        <small class="text-muted">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            Must be 18 or older to use ModernMatch
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Age Range Info -->
+                        <div class="alert alert-info border-0 rounded-xl">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-lightbulb fs-4 me-3"></i>
+                                <div>
+                                    <h6 class="alert-heading mb-2">Age Compatibility</h6>
+                                    <p class="mb-0">We'll suggest matches within an appropriate age range based on your selection.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Navigation -->
+                        <div class="d-flex justify-content-between mt-5">
+                            {% if progress > 1 %}
+                            <a href="{% url 'quiz_step' step=prev_step %}" class="btn btn-outline-primary btn-lg">
+                                <i class="bi bi-arrow-left me-2"></i>Back
+                            </a>
+                            {% else %}
+                            <div></div> <!-- Empty div for spacing -->
+                            {% endif %}
+                            
+                            <button type="submit" class="btn btn-primary btn-lg px-5">
+                                Continue <i class="bi bi-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Quiz Tips -->
+            <div class="mt-4 text-center">
+                <div class="d-inline-flex align-items-center bg-light rounded-pill px-4 py-2">
+                    <i class="bi bi-shield-check text-primary me-2"></i>
+                    <small class="text-muted">Your information is secure and confidential</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // Age input validation
+        $('#id_age').on('input', function() {
+            const age = parseInt($(this).val());
+            if (age < 18) {
+                $(this).addClass('is-invalid');
+                $('.submit-btn').prop('disabled', true);
+            } else {
+                $(this).removeClass('is-invalid');
+                $('.submit-btn').prop('disabled', false);
+            }
+        });
+        
+        // Form submission
+        $('form').submit(function() {
+            $('button[type="submit"]').prop('disabled', true);
+            $('button[type="submit"]').html(`
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                Processing...
+            `);
+        });
+    });
+</script>
+{% endblock %}

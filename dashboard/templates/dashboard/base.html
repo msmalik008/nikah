@@ -1,0 +1,540 @@
+<!-- dashboard/templates/dashboard/base.html -->
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - SoulMate{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Dashboard Specific Styles */
+.dashboard-container {
+    min-height: calc(100vh - 140px);
+}
+
+.dashboard-nav {
+    background: linear-gradient(135deg, rgba(20, 20, 20, 0.95), rgba(30, 30, 30, 0.95));
+    backdrop-filter: blur(20px);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.dashboard-nav-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    color: var(--text-light);
+    text-decoration: none;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    margin-bottom: 0.5rem;
+}
+
+.dashboard-nav-item:hover {
+    background: rgba(156, 39, 176, 0.1);
+    color: var(--primary-color);
+    transform: translateX(5px);
+}
+
+.dashboard-nav-item.active {
+    background: linear-gradient(45deg, rgba(156, 39, 176, 0.2), rgba(233, 30, 99, 0.2));
+    color: var(--primary-color);
+    border-left: 3px solid var(--primary-color);
+}
+
+.dashboard-nav-icon {
+    width: 24px;
+    margin-right: 10px;
+    font-size: 1.1rem;
+}
+
+.dashboard-card {
+    background: linear-gradient(135deg, rgba(25, 25, 25, 0.95), rgba(35, 35, 35, 0.95));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    backdrop-filter: blur(10px);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.dashboard-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dashboard-card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-light);
+    margin: 0;
+}
+
+.dashboard-card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
+    color: white;
+    font-size: 1.2rem;
+}
+
+.match-card {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.match-card:hover .match-overlay {
+    opacity: 1;
+}
+
+.match-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to bottom, transparent 60%, rgba(0, 0, 0, 0.9));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.match-img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.match-info {
+    padding: 1rem 0 0;
+}
+
+.match-name {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.match-age {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.match-percentage {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
+    color: white;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.stat-card {
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 0.5rem;
+}
+
+.timeline-post {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.post-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.post-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary-color);
+}
+
+.post-user-info {
+    margin-left: 1rem;
+}
+
+.post-username {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.post-time {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.post-content {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.post-image {
+    width: 100%;
+    max-height: 400px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+}
+
+.post-actions {
+    display: flex;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.post-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.post-action-btn:hover {
+    color: var(--primary-color);
+}
+
+.post-action-btn.active {
+    color: var(--accent-color);
+}
+
+.comment-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.comment-form {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.comment-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 0.75rem 1rem;
+    color: var(--text-light);
+    outline: none;
+}
+
+.comment-input:focus {
+    border-color: var(--primary-color);
+}
+
+.widget {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.widget-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.online-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4CAF50;
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+.message-preview {
+    padding: 0.75rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    margin-bottom: 0.75rem;
+    transition: background 0.3s ease;
+    cursor: pointer;
+}
+
+.message-preview:hover {
+    background: rgba(156, 39, 176, 0.1);
+}
+
+.message-preview.unread {
+    background: rgba(33, 150, 243, 0.1);
+    border-left: 3px solid #2196F3;
+}
+
+.progress-container {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.quick-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: var(--text-light);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    margin-bottom: 0.75rem;
+}
+
+.quick-action-btn:hover {
+    background: rgba(156, 39, 176, 0.2);
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+}
+
+.notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: linear-gradient(45deg, var(--accent-color), #ff4081);
+    color: white;
+    font-size: 0.7rem;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .dashboard-nav {
+        margin-bottom: 1rem;
+    }
+    
+    .dashboard-card {
+        padding: 1rem;
+    }
+    
+    .match-img {
+        height: 150px;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+    }
+    
+    .post-actions {
+        flex-wrap: wrap;
+    }
+    
+    .quick-action-btn {
+        flex-direction: column;
+        text-align: center;
+        padding: 0.75rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar Navigation -->
+            <div class="col-lg-3 col-xl-2">
+                <div class="dashboard-nav">
+                    <h4 class="mb-4">Dashboard</h4>
+                    
+                    <div class="nav flex-column">
+                        <a href="{% url 'dashboard:dashboard' %}" class="dashboard-nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                            <i class="fas fa-home dashboard-nav-icon"></i>
+                            Home
+                        </a>
+                        
+                        <a href="{% url 'useractivity:timeline' %}" class="dashboard-nav-item">
+                            <i class="fas fa-newspaper dashboard-nav-icon"></i>
+                            Timeline
+                        </a>
+                        
+                        <a href="{% url 'accounts:people_nearby' %}" class="dashboard-nav-item">
+                            <i class="fas fa-search dashboard-nav-icon"></i>
+                            Discover
+                        </a>
+                        
+                        <a href="{% url 'chat:chat' %}" class="dashboard-nav-item">
+                            <i class="fas fa-envelope dashboard-nav-icon"></i>
+                            Messages
+                            {% if unread_messages_count %}
+                            <span class="notification-badge">{{ unread_messages_count }}</span>
+                            {% endif %}
+                        </a>
+                        
+                        <a href="{% url 'useractivity:activity_stream' %}" class="dashboard-nav-item">
+                            <i class="fas fa-bell dashboard-nav-icon"></i>
+                            Activity
+                            {% if unread_activities_count %}
+                            <span class="notification-badge">{{ unread_activities_count }}</span>
+                            {% endif %}
+                        </a>
+                        
+                        <div class="my-3" style="border-top: 1px solid rgba(255,255,255,0.1);"></div>
+                        
+                        <a href="{% url 'accounts:profile_view' %}" class="dashboard-nav-item">
+                            <i class="fas fa-user dashboard-nav-icon"></i>
+                            My Profile
+                        </a>
+                        
+                        <a href="{% url 'accounts:account_settings' %}" class="dashboard-nav-item">
+                            <i class="fas fa-cog dashboard-nav-icon"></i>
+                            Settings
+                        </a>
+                        
+                        <a href="{% url 'accounts:activity_history' %}" class="dashboard-nav-item">
+                            <i class="fas fa-history dashboard-nav-icon"></i>
+                            Activity History
+                        </a>
+                        
+                        <div class="my-3" style="border-top: 1px solid rgba(255,255,255,0.1);"></div>
+                        
+                        <a href="{% url 'friendship:get_likes' %}" class="dashboard-nav-item">
+                            <i class="fas fa-heart dashboard-nav-icon"></i>
+                            Likes
+                            {% if new_likes_count %}
+                            <span class="notification-badge">{{ new_likes_count }}</span>
+                            {% endif %}
+                        </a>
+                        
+                        <a href="{% url 'accounts:download_app' %}" class="dashboard-nav-item">
+                            <i class="fas fa-mobile-alt dashboard-nav-icon"></i>
+                            Download App
+                        </a>
+                    </div>
+                    
+                    <!-- Profile Completion -->
+                    <div class="progress-container mt-4">
+                        <div class="progress-header">
+                            <span>Profile Strength</span>
+                            <span>{{ profile_completion }}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: {{ profile_completion }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Content Area -->
+            <div class="col-lg-9 col-xl-10">
+                {% block dashboard_content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Dashboard specific JavaScript
+$(document).ready(function() {
+    // Initialize tooltips
+    $('[data-bs-toggle="tooltip"]').tooltip();
+    
+    // Mark notifications as read
+    $('.notification-badge').click(function(e) {
+        e.preventDefault();
+        const url = $(this).data('mark-read-url');
+        if (url) {
+            $.post(url, function(response) {
+                if (response.success) {
+                    location.reload();
+                }
+            });
+        }
+    });
+    
+    // Lazy load images
+    $('img.lazy-load').each(function() {
+        const src = $(this).data('src');
+        if (src) {
+            $(this).attr('src', src);
+        }
+    });
+});
+</script>
+{% endblock %}

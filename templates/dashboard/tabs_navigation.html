@@ -1,0 +1,59 @@
+<ul class="nav nav-tabs nav-tabs-dashboard mb-4" id="dashboardTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link {% if active_tab == 'overview' or not active_tab %}active{% endif %}" 
+        href="?tab=overview"
+        data-bs-toggle="tab" 
+        data-bs-target="#overview" 
+        role="tab">
+            <i class="bi bi-speedometer2 me-2"></i>Overview
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link {% if active_tab == 'discover' %}active{% endif %}" 
+        href="?tab=discover"
+        data-bs-toggle="tab" 
+        data-bs-target="#discover" 
+        role="tab">
+            <i class="bi bi-compass me-2"></i>Discover
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link {% if active_tab == 'matches' %}active{% endif %}" 
+        href="?tab=matches"
+        data-bs-toggle="tab" 
+        data-bs-target="#matches" 
+        role="tab">
+            <i class="bi bi-heart me-2"></i>Matches
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link {% if active_tab == 'friends' %}active{% endif %}" 
+        href="?tab=friends"
+        data-bs-toggle="tab" 
+        data-bs-target="#friends" 
+        role="tab">
+            <i class="bi bi-people me-2"></i>Friends
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link {% if active_tab == 'messages' %}active{% endif %}" 
+        href="?tab=messages"
+        data-bs-toggle="tab" 
+        data-bs-target="#messages" 
+        role="tab">
+            <i class="bi bi-chat-dots me-2"></i>Messages
+            {% if unread_messages %}
+            <span class="badge bg-danger ms-1">{{ unread_messages }}</span>
+            {% endif %}
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link {% if active_tab == 'profile' %}active{% endif %}" 
+        href="?tab=profile"
+        data-bs-toggle="tab" 
+        data-bs-target="#profile" 
+        role="tab">
+            <i class="bi bi-person me-2"></i>My Profile
+        </a>
+    </li>
+</ul>

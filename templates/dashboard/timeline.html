@@ -1,0 +1,116 @@
+<!-- Create Post -->
+<div class="post-card">
+    <div class="post-header">
+        {% if user_profile.profile_pic %}
+        <img src="{{ user_profile.profile_pic.url }}" class="post-author-img" alt="{{ user.username }}">
+        {% else %}
+        <div class="post-author-img bg-primary text-white d-flex align-items-center justify-content-center">
+            {{ user.username|first|upper }}
+        </div>
+        {% endif %}
+        <div style="flex: 1;">
+            <textarea class="form-control border-0" 
+                      rows="2" 
+                      placeholder="What's on your mind, {{ user.username }}?"
+                      style="resize: none;"></textarea>
+        </div>
+    </div>
+    <div class="post-actions">
+        <button class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-image me-1"></i> Photo
+        </button>
+        <button class="btn btn-outline-success btn-sm">
+            <i class="bi bi-camera-video me-1"></i> Video
+        </button>
+        <button class="btn btn-outline-warning btn-sm">
+            <i class="bi bi-calendar-event me-1"></i> Event
+        </button>
+        <button class="btn btn-primary btn-sm ms-auto">
+            <i class="bi bi-send me-1"></i> Post
+        </button>
+    </div>
+</div>
+
+<!-- Activity Feed -->
+<div class="post-card">
+    <div class="post-header">
+        <h6 class="mb-0"><i class="bi bi-activity me-2"></i> Recent Activity</h6>
+    </div>
+    <div class="post-content">
+        {% if recent_activity %}
+        <div class="activity-feed">
+            {% for activity in recent_activity %}
+            <div class="activity-item mb-3">
+                <div class="d-flex align-items-start">
+                    <div class="position-relative me-3">
+                        {% if activity.user.profile.profile_pic %}
+                        <img src="{{ activity.user.profile.profile_pic.url }}" 
+                             class="post-author-img" 
+                             alt="{{ activity.user.username }}">
+                        {% else %}
+                        <div class="post-author-img bg-primary text-white d-flex align-items-center justify-content-center">
+                            {{ activity.user.username|first|upper }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <p class="mb-1">
+                            <strong>{{ activity.user.get_full_name|default:activity.user.username }}</strong>
+                            {{ activity.get_action_display }}
+                            {% if activity.target_user %}
+                            <strong>{{ activity.target_user.get_full_name|default:activity.target_user.username }}</strong>
+                            {% endif %}
+                        </p>
+                        <small class="text-muted">{{ activity.created_at|timesince }} ago</small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-activity display-4 text-muted mb-3"></i>
+            <p class="text-muted">No recent activity</p>
+            <a href="?tab=discover" class="btn btn-outline-primary">
+                <i class="bi bi-compass me-2"></i> Discover People
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Friend Updates -->
+<div class="post-card">
+    <div class="post-header">
+        <h6 class="mb-0"><i class="bi bi-people-fill me-2"></i> Friend Updates</h6>
+    </div>
+    <div class="post-content">
+        {% if friend_updates %}
+        <div class="row g-2">
+            {% for update in friend_updates %}
+            <div class="col-md-4">
+                <div class="friend-update-card text-center p-3 border rounded">
+                    {% if update.user.profile.profile_pic %}
+                    <img src="{{ update.user.profile.profile_pic.url }}" 
+                         class="rounded-circle mb-2" 
+                         style="width: 60px; height: 60px; object-fit: cover;">
+                    {% else %}
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-2" 
+                         style="width: 60px; height: 60px;">
+                        {{ update.user.username|first|upper }}
+                    </div>
+                    {% endif %}
+                    <h6 class="mb-1">{{ update.user.get_full_name|default:update.user.username }}</h6>
+                    <small class="text-muted">{{ update.get_update_type_display }}</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-people display-4 text-muted mb-3"></i>
+            <p class="text-muted">No friend updates yet</p>
+        </div>
+        {% endif %}
+    </div>
+</div>

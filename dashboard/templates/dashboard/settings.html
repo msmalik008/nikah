@@ -1,0 +1,789 @@
+<!-- dashboard/templates/dashboard/settings.html -->
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Settings{% endblock %}
+
+{% block extra_css %}
+<style>
+.settings-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    transition: all 0.3s;
+}
+
+.settings-card:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.settings-icon {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+}
+
+.danger-zone {
+    border: 2px solid #dc3545;
+    border-radius: 10px;
+    padding: 20px;
+    background-color: #fff8f8;
+}
+
+.settings-section {
+    margin-bottom: 30px;
+}
+
+.section-title {
+    color: #333;
+    font-size: 18px;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+    background-color: #007bff;
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(26px);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Settings Navigation -->
+    <div class="col-lg-3 mb-4">
+        <div class="card settings-card">
+            <div class="card-body">
+                <nav class="nav flex-column">
+                    <a class="nav-link active" href="#account" data-bs-toggle="tab">
+                        <i class="fas fa-user-circle me-2"></i> Account
+                    </a>
+                    <a class="nav-link" href="#privacy" data-bs-toggle="tab">
+                        <i class="fas fa-shield-alt me-2"></i> Privacy
+                    </a>
+                    <a class="nav-link" href="#notifications" data-bs-toggle="tab">
+                        <i class="fas fa-bell me-2"></i> Notifications
+                    </a>
+                    <a class="nav-link" href="#security" data-bs-toggle="tab">
+                        <i class="fas fa-lock me-2"></i> Security
+                    </a>
+                    <a class="nav-link" href="#blocked" data-bs-toggle="tab">
+                        <i class="fas fa-ban me-2"></i> Blocked Users
+                    </a>
+                    <a class="nav-link" href="#danger" data-bs-toggle="tab">
+                        <i class="fas fa-exclamation-triangle me-2 text-danger"></i> Danger Zone
+                    </a>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Content -->
+    <div class="col-lg-9">
+        <div class="tab-content">
+            <!-- Account Settings -->
+            <div class="tab-pane fade show active" id="account" role="tabpanel">
+                <div class="card settings-card">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4">Account Settings</h4>
+                        
+                        <form id="accountForm">
+                            <div class="settings-section">
+                                <h5 class="section-title">Personal Information</h5>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="username" class="form-label">Username</label>
+                                        <input type="text" class="form-control" id="username" 
+                                               value="{{ request.user.username }}" disabled>
+                                        <small class="form-text text-muted">Username cannot be changed</small>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="email" class="form-label">Email Address</label>
+                                        <input type="email" class="form-control" id="email" 
+                                               value="{{ request.user.email }}">
+                                        <small class="form-text text-muted">We'll send verification email to new address</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="phone" class="form-label">Phone Number</label>
+                                        <input type="tel" class="form-control" id="phone" 
+                                               value="{{ profile.phone|default:'' }}">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="language" class="form-label">Language</label>
+                                        <select class="form-control" id="language">
+                                            <option value="en" selected>English</option>
+                                            <option value="ar">Arabic</option>
+                                            <option value="ur">Urdu</option>
+                                            <option value="fr">French</option>
+                                            <option value="es">Spanish</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="settings-section">
+                                <h5 class="section-title">Profile Visibility</h5>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="profileVisible" checked>
+                                    <label class="form-check-label" for="profileVisible">
+                                        Make my profile visible to others
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="showOnlineStatus" checked>
+                                    <label class="form-check-label" for="showOnlineStatus">
+                                        Show my online status
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="showLastSeen" checked>
+                                    <label class="form-check-label" for="showLastSeen">
+                                        Show last seen time
+                                    </label>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Privacy Settings -->
+            <div class="tab-pane fade" id="privacy" role="tabpanel">
+                <div class="card settings-card">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4">Privacy Settings</h4>
+                        
+                        <form id="privacyForm">
+                            <div class="settings-section">
+                                <h5 class="section-title">Who Can See My Information</h5>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Who can see my profile?</label>
+                                    <select class="form-control" id="profileVisibility">
+                                        <option value="public">Everyone</option>
+                                        <option value="registered">Registered Users Only</option>
+                                        <option value="friends">Friends Only</option>
+                                        <option value="nobody">Nobody</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Who can send me friend requests?</label>
+                                    <select class="form-control" id="friendRequests">
+                                        <option value="everyone">Everyone</option>
+                                        <option value="friends_of_friends">Friends of Friends</option>
+                                        <option value="nobody">Nobody</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Who can send me messages?</label>
+                                    <select class="form-control" id="messagePrivacy">
+                                        <option value="everyone">Everyone</option>
+                                        <option value="friends">Friends Only</option>
+                                        <option value="matches">Matches Only</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="settings-section">
+                                <h5 class="section-title">Information Sharing</h5>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="shareAge" checked>
+                                    <label class="form-check-label" for="shareAge">
+                                        Share my age
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="shareLocation" checked>
+                                    <label class="form-check-label" for="shareLocation">
+                                        Share my location (city only)
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="shareEducation" checked>
+                                    <label class="form-check-label" for="shareEducation">
+                                        Share my education information
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="shareSect" checked>
+                                    <label class="form-check-label" for="shareSect">
+                                        Share my sect
+                                    </label>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">Save Privacy Settings</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notification Settings -->
+            <div class="tab-pane fade" id="notifications" role="tabpanel">
+                <div class="card settings-card">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4">Notification Settings</h4>
+                        
+                        <form id="notificationForm">
+                            <div class="settings-section">
+                                <h5 class="section-title">Email Notifications</h5>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="emailLikes" checked>
+                                    <label class="form-check-label" for="emailLikes">
+                                        New likes on my profile
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="emailMatches" checked>
+                                    <label class="form-check-label" for="emailMatches">
+                                        New mutual matches
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="emailMessages" checked>
+                                    <label class="form-check-label" for="emailMessages">
+                                        New messages
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="emailFriendRequests" checked>
+                                    <label class="form-check-label" for="emailFriendRequests">
+                                        New friend requests
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="emailPromotions">
+                                    <label class="form-check-label" for="emailPromotions">
+                                        Promotional emails
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="settings-section">
+                                <h5 class="section-title">Push Notifications</h5>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="pushLikes" checked>
+                                    <label class="form-check-label" for="pushLikes">
+                                        New likes on my profile
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="pushMatches" checked>
+                                    <label class="form-check-label" for="pushMatches">
+                                        New mutual matches
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="pushMessages" checked>
+                                    <label class="form-check-label" for="pushMessages">
+                                        New messages
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="pushFriendRequests" checked>
+                                    <label class="form-check-label" for="pushFriendRequests">
+                                        New friend requests
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="settings-section">
+                                <h5 class="section-title">Notification Schedule</h5>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="quietStart" class="form-label">Quiet Hours Start</label>
+                                        <input type="time" class="form-control" id="quietStart" value="22:00">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="quietEnd" class="form-label">Quiet Hours End</label>
+                                        <input type="time" class="form-control" id="quietEnd" value="08:00">
+                                    </div>
+                                </div>
+                                <small class="form-text text-muted">During quiet hours, you won't receive push notifications</small>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">Save Notification Settings</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Settings -->
+            <div class="tab-pane fade" id="security" role="tabpanel">
+                <div class="card settings-card">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4">Security Settings</h4>
+                        
+                        <div class="settings-section">
+                            <h5 class="section-title">Change Password</h5>
+                            <form id="passwordForm">
+                                <div class="mb-3">
+                                    <label for="currentPassword" class="form-label">Current Password</label>
+                                    <input type="password" class="form-control" id="currentPassword" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="newPassword" class="form-label">New Password</label>
+                                    <input type="password" class="form-control" id="newPassword" required>
+                                    <small class="form-text text-muted">Must be at least 8 characters long</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                                    <input type="password" class="form-control" id="confirmPassword" required>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary">Change Password</button>
+                            </form>
+                        </div>
+
+                        <div class="settings-section">
+                            <h5 class="section-title">Two-Factor Authentication</h5>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Two-factor authentication adds an extra layer of security to your account.
+                            </div>
+                            
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="twoFactorEnabled">
+                                <label class="form-check-label" for="twoFactorEnabled">
+                                    Enable Two-Factor Authentication
+                                </label>
+                            </div>
+                            
+                            <button class="btn btn-outline-primary" id="setup2FA">
+                                <i class="fas fa-qrcode me-2"></i> Setup 2FA
+                            </button>
+                        </div>
+
+                        <div class="settings-section">
+                            <h5 class="section-title">Active Sessions</h5>
+                            
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Device</th>
+                                            <th>Location</th>
+                                            <th>Last Active</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>
+                                                <i class="fas fa-desktop me-2"></i> Windows Chrome
+                                            </td>
+                                            <td>New York, USA</td>
+                                            <td>Just now</td>
+                                            <td><span class="badge bg-success">Current</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <i class="fas fa-mobile-alt me-2"></i> iPhone Safari
+                                            </td>
+                                            <td>London, UK</td>
+                                            <td>2 hours ago</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-danger">Logout</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <button class="btn btn-outline-danger" id="logoutAll">
+                                <i class="fas fa-sign-out-alt me-2"></i> Logout From All Devices
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Blocked Users -->
+            <div class="tab-pane fade" id="blocked" role="tabpanel">
+                <div class="card settings-card">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4">Blocked Users</h4>
+                        
+                        {% if blocked_users %}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Blocked Since</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in blocked_users %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                {% if user.userprofile.profile_pic %}
+                                                <img src="{{ user.userprofile.profile_pic.url }}" 
+                                                     class="rounded-circle me-2" width="40" height="40">
+                                                {% else %}
+                                                <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center me-2" 
+                                                     style="width: 40px; height: 40px;">
+                                                    <i class="fas fa-user text-white"></i>
+                                                </div>
+                                                {% endif %}
+                                                <div>
+                                                    <strong>{{ user.get_full_name|default:user.username }}</strong>
+                                                    <div class="small text-muted">
+                                                        {% if user.userprofile.city %}{{ user.userprofile.city }}{% endif %}
+                                                        {% if user.userprofile.country %}, {{ user.userprofile.country }}{% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{{ user.blocked_date|date:"M d, Y" }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-success unblock-btn" data-user-id="{{ user.id }}">
+                                                Unblock
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No Blocked Users</h5>
+                            <p class="text-muted">You haven't blocked any users yet.</p>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mt-4">
+                            <h5>Block New User</h5>
+                            <div class="input-group">
+                                <input type="text" class="form-control" placeholder="Search for a user to block..." id="blockSearch">
+                                <button class="btn btn-outline-danger" type="button" id="searchBlockBtn">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div id="blockResults" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="tab-pane fade" id="danger" role="tabpanel">
+                <div class="danger-zone">
+                    <h4 class="text-danger mb-4">Danger Zone</h4>
+                    
+                    <div class="settings-section">
+                        <h5 class="section-title text-danger">Deactivate Account</h5>
+                        <p>Deactivating your account will hide your profile from other users. Your data will be preserved for 30 days.</p>
+                        <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deactivateModal">
+                            <i class="fas fa-user-slash me-2"></i> Deactivate Account
+                        </button>
+                    </div>
+
+                    <div class="settings-section">
+                        <h5 class="section-title text-danger">Delete Account</h5>
+                        <p class="text-danger"><strong>Warning:</strong> This action cannot be undone. All your data will be permanently deleted.</p>
+                        <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                            <i class="fas fa-trash me-2"></i> Delete Account Permanently
+                        </button>
+                    </div>
+
+                    <div class="settings-section">
+                        <h5 class="section-title">Data Export</h5>
+                        <p>Download all your personal data from our platform.</p>
+                        <button class="btn btn-outline-primary" id="exportDataBtn">
+                            <i class="fas fa-download me-2"></i> Export My Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Deactivate Account Modal -->
+<div class="modal fade" id="deactivateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Deactivate Account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to deactivate your account?</p>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="confirmDeactivate">
+                    <label class="form-check-label" for="confirmDeactivate">
+                        I understand that my profile will be hidden from other users
+                    </label>
+                </div>
+                <div class="mb-3">
+                    <label for="deactivateReason" class="form-label">Reason for leaving (optional)</label>
+                    <textarea class="form-control" id="deactivateReason" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeactivateBtn">Deactivate Account</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">Delete Account Permanently</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone. All your data will be permanently deleted.
+                </div>
+                <p>To confirm, please type your password:</p>
+                <input type="password" class="form-control" id="deletePassword" placeholder="Enter your password">
+                <div class="form-check mt-3">
+                    <input class="form-check-input" type="checkbox" id="confirmDelete">
+                    <label class="form-check-label" for="confirmDelete">
+                        I understand that all my data will be permanently deleted
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn" disabled>Delete Account</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Form submissions
+    $('form').submit(function(e) {
+        e.preventDefault();
+        const formId = $(this).attr('id');
+        
+        // In a real app, you would submit via AJAX
+        showToast('Settings saved successfully!', 'success');
+    });
+    
+    // Toggle 2FA setup
+    $('#setup2FA').click(function() {
+        // In a real app, you would show QR code setup
+        alert('Two-factor authentication setup would be shown here.');
+    });
+    
+    // Logout all sessions
+    $('#logoutAll').click(function() {
+        if (confirm('Are you sure you want to logout from all devices?')) {
+            // In a real app, you would make AJAX call
+            showToast('Logged out from all devices successfully.', 'success');
+        }
+    });
+    
+    // Unblock user
+    $('.unblock-btn').click(function() {
+        const userId = $(this).data('user-id');
+        const btn = $(this);
+        
+        if (confirm('Are you sure you want to unblock this user?')) {
+            // In a real app, you would make AJAX call
+            showToast('User unblocked successfully.', 'success');
+            btn.closest('tr').fadeOut();
+        }
+    });
+    
+    // Search for users to block
+    $('#searchBlockBtn').click(function() {
+        const query = $('#blockSearch').val().trim();
+        if (query) {
+            $('#blockResults').html('<div class="text-center"><div class="spinner-border text-primary"></div></div>');
+            
+            // In a real app, you would make AJAX call to search users
+            setTimeout(() => {
+                $('#blockResults').html(`
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>John Doe</strong>
+                                    <div class="small text-muted">New York, USA</div>
+                                </div>
+                                <button class="btn btn-sm btn-danger block-user-btn" data-user-id="123">
+                                    Block
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            }, 1000);
+        }
+    });
+    
+    // Block user from search results
+    $(document).on('click', '.block-user-btn', function() {
+        const userId = $(this).data('user-id');
+        
+        if (confirm('Are you sure you want to block this user?')) {
+            // In a real app, you would make AJAX call
+            showToast('User blocked successfully.', 'success');
+            $('#blockResults').empty();
+            $('#blockSearch').val('');
+        }
+    });
+    
+    // Export data
+    $('#exportDataBtn').click(function() {
+        // In a real app, you would trigger data export
+        showToast('Data export has been started. You will receive an email when it\'s ready.', 'info');
+    });
+    
+    // Deactivate account
+    $('#confirmDeactivateBtn').click(function() {
+        if ($('#confirmDeactivate').is(':checked')) {
+            // In a real app, you would make AJAX call
+            showToast('Account deactivated successfully.', 'success');
+            $('#deactivateModal').modal('hide');
+        } else {
+            alert('Please confirm that you understand the consequences.');
+        }
+    });
+    
+    // Delete account confirmation
+    $('#confirmDelete').change(function() {
+        $('#confirmDeleteBtn').prop('disabled', !$(this).is(':checked'));
+    });
+    
+    $('#confirmDeleteBtn').click(function() {
+        const password = $('#deletePassword').val();
+        if (!password) {
+            alert('Please enter your password.');
+            return;
+        }
+        
+        if (confirm('Are you absolutely sure? This action cannot be undone!')) {
+            // In a real app, you would make AJAX call with password
+            showToast('Account deletion request submitted.', 'warning');
+            $('#deleteModal').modal('hide');
+        }
+    });
+    
+    // Change password validation
+    $('#passwordForm').submit(function(e) {
+        e.preventDefault();
+        const newPassword = $('#newPassword').val();
+        const confirmPassword = $('#confirmPassword').val();
+        
+        if (newPassword.length < 8) {
+            alert('Password must be at least 8 characters long.');
+            return;
+        }
+        
+        if (newPassword !== confirmPassword) {
+            alert('Passwords do not match.');
+            return;
+        }
+        
+        // In a real app, you would make AJAX call
+        showToast('Password changed successfully!', 'success');
+        $('#passwordForm')[0].reset();
+    });
+    
+    function showToast(message, type) {
+        const toast = $(`<div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>`);
+        
+        $('.toast-container').append(toast);
+        const bsToast = new bootstrap.Toast(toast[0]);
+        bsToast.show();
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}
