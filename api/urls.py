@@ -42,16 +42,3 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    
-    # Debug toolbar
-    try:
-        import debug_toolbar
-        urlpatterns += [path('__debug__/', include(debug_toolbar.urls))]
-    except ImportError:
-        pass
-
-# Custom error handlers
-handler404 = 'accounts.views.handler404'
-handler500 = 'accounts.views.handler500'
-handler403 = 'accounts.views.handler403'
-handler400 = 'accounts.views.handler400'

@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'dashboard/base.html' %}
 {% load static %}
 
 {% block title %}Timeline - {{ block.super }}{% endblock %}
@@ -135,96 +135,259 @@
 </div>
 {% endblock %}
 
+<!-- useractivity/timeline.html - Update the JavaScript -->
 {% block extra_js %}
 <script>
-// AJAX form submission for posts
-document.getElementById('post-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const form = this;
-    const formData = new FormData(form);
-    
-    fetch(form.action, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            form.reset();
-            // Reload posts or add new post dynamically
-            location.reload();
-        } else {
-            alert('Error: ' + (data.errors || 'Failed to create post'));
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('An error occurred. Please try again.');
-    });
-});
-
-// Load recent activity via AJAX
-function loadRecentActivity() {
-    fetch('{% url "useractivity:activity_stream" %}?limit=5')
-    .then(response => response.json())
-    .then(data => {
-        const container = document.getElementById('recent-activity');
-        if (data.activities && data.activities.length > 0) {
-            let html = '<ul class="list-group list-group-flush">';
-            data.activities.forEach(activity => {
-                html += `<li class="list-group-item">${activity.description}</li>`;
-            });
-            html += '</ul>';
-            container.innerHTML = html;
-        } else {
-            container.innerHTML = '<p class="text-muted">No recent activity</p>';
-        }
-    });
-}
-
-// Load online friends via AJAX
-function loadOnlineFriends() {
-    fetch('{% url "friendship:get_likes" %}?online_only=true')
-    .then(response => response.json())
-    .then(data => {
-        const container = document.getElementById('online-friends');
-        if (data.online_friends && data.online_friends.length > 0) {
-            let html = '<div class="list-group">';
-            data.online_friends.forEach(friend => {
-                html += `
-                <div class="list-group-item d-flex align-items-center">
-                    <img src="${friend.profile_pic || '{% static "img/default-avatar.png" %}'}" 
-                         class="rounded-circle me-3" 
-                         style="width: 40px; height: 40px; object-fit: cover;"
-                         alt="${friend.username}">
-                    <div>
-                        <h6 class="mb-0">${friend.username}</h6>
-                        <small class="text-success">● Online</small>
-                    </div>
-                </div>`;
-            });
-            html += '</div>';
-            container.innerHTML = html;
-        } else {
-            container.innerHTML = '<p class="text-muted">No friends online</p>';
-        }
-    });
-}
-
-// Load data on page load
+// Load posts on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadRecentActivity();
     loadOnlineFriends();
+    loadPosts();
     
     // Auto-refresh every 30 seconds
     setInterval(() => {
         loadRecentActivity();
         loadOnlineFriends();
+        if (!document.querySelector('#post-form textarea:focus')) {
+            loadPosts();
+        }
     }, 30000);
 });
+
+// Load posts via AJAX
+function loadPosts() {
+    fetch('{% url "useractivity:api_posts" %}')
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success && data.posts.length > 0) {
+            const container = document.getElementById('posts-container');
+            if (container) {
+                container.innerHTML = '';
+                data.posts.forEach(post => {
+                    container.innerHTML += createPostHTML(post);
+                });
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error loading posts:', error);
+    });
+}
+
+// Create HTML for a single post
+function createPostHTML(post) {
+    return `
+    <div class="card mb-3 post-card" data-post-id="${post.id}">
+        <div class="card-body">
+            <!-- Post header -->
+            <div class="d-flex align-items-center mb-3">
+                <img src="${post.user.profile_pic || '{% static "img/default-avatar.png" %}'}" 
+                     class="rounded-circle me-3" 
+                     style="width: 40px; height: 40px; object-fit: cover;"
+                     alt="${post.user.username}">
+                <div>
+                    <h6 class="mb-0">${post.user.username}</h6>
+                    <small class="text-muted">${post.created_at}</small>
+                </div>
+            </div>
+            
+            <!-- Post content -->
+            <p class="card-text">${escapeHtml(post.content)}</p>
+            
+            <!-- Post image -->
+            ${post.image ? `<img src="${post.image}" class="img-fluid rounded mb-3" alt="Post image">` : ''}
+            
+            <!-- Post actions -->
+            <div class="d-flex justify-content-between">
+                <button class="btn btn-sm btn-outline-primary like-btn" onclick="likePost(${post.id})">
+                    <i class="fas fa-heart ${post.user_liked ? 'text-danger' : 'text-muted'}"></i>
+                    <span class="ms-1">${post.likes_count}</span>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="commentPost(${post.id})">
+                    <i class="fas fa-comment"></i>
+                    <span class="ms-1">${post.comments_count}</span>
+                </button>
+                <button class="btn btn-sm btn-outline-danger bookmark-btn" onclick="bookmarkPost(${post.id})">
+                    <i class="fas fa-bookmark ${post.user_bookmarked ? 'text-warning' : 'text-muted'}"></i>
+                </button>
+            </div>
+        </div>
+    </div>`;
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Load recent activity via AJAX
+function loadRecentActivity() {
+    fetch('{% url "useractivity:recent_activity" %}')
+    .then(response => response.json())
+    .then(data => {
+        const container = document.getElementById('recent-activity');
+        if (data.success && data.activities && data.activities.length > 0) {
+            let html = '<ul class="list-group list-group-flush">';
+            data.activities.forEach(activity => {
+                html += `
+                <li class="list-group-item py-2">
+                    <small>${activity.description}</small>
+                    <br>
+                    <small class="text-muted">${activity.created_at}</small>
+                </li>`;
+            });
+            html += '</ul>';
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = '<p class="text-muted text-center py-3">No recent activity</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error loading activity:', error);
+        document.getElementById('recent-activity').innerHTML = 
+            '<p class="text-danger text-center py-3">Failed to load activity</p>';
+    });
+}
+
+// Load online friends via AJAX
+function loadOnlineFriends() {
+    fetch('{% url "friendship:get_likes" %}')
+    .then(response => response.json())
+    .then(data => {
+        const container = document.getElementById('online-friends');
+        if (data.success && data.data && data.data.mutual_matches) {
+            const onlineFriends = data.data.mutual_matches.slice(0, 5); // Get first 5
+            
+            if (onlineFriends.length > 0) {
+                let html = '<div class="list-group">';
+                onlineFriends.forEach(friend => {
+                    html += `
+                    <div class="list-group-item d-flex align-items-center py-2">
+                        <img src="${friend.profile_pic || '{% static "img/default-avatar.png" %}'}" 
+                             class="rounded-circle me-3" 
+                             style="width: 35px; height: 35px; object-fit: cover;"
+                             alt="${friend.username}">
+                        <div>
+                            <h6 class="mb-0 small">${friend.username}</h6>
+                            <small class="text-success">● Online</small>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<p class="text-muted text-center py-3">No friends online</p>';
+            }
+        } else {
+            container.innerHTML = '<p class="text-muted text-center py-3">No friends online</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error loading online friends:', error);
+        document.getElementById('online-friends').innerHTML = 
+            '<p class="text-danger text-center py-3">Failed to load friends</p>';
+    });
+}
+
+// Post form submission with AJAX
+document.addEventListener('DOMContentLoaded', function() {
+    const postForm = document.getElementById('post-form');
+    if (postForm) {
+        postForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const form = this;
+            const formData = new FormData(form);
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Posting...';
+            
+            fetch('{% url "useractivity:create_post_api" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    form.reset();
+                    showToast('Post created successfully!', 'success');
+                    loadPosts(); // Reload posts
+                } else {
+                    let errorMsg = 'Failed to create post';
+                    if (data.errors && data.errors.content) {
+                        errorMsg = data.errors.content[0];
+                    }
+                    showToast(errorMsg, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('An error occurred. Please try again.', 'error');
+            })
+            .finally(() => {
+                // Reset button state
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            });
+        });
+    }
+});
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    // Create toast container if it doesn't exist
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.style.position = 'fixed';
+        toastContainer.style.top = '20px';
+        toastContainer.style.right = '20px';
+        toastContainer.style.zIndex = '9999';
+        document.body.appendChild(toastContainer);
+    }
+    
+    // Create toast
+    const toastId = 'toast-' + Date.now();
+    const toast = document.createElement('div');
+    toast.id = toastId;
+    toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    // Show toast
+    const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+    bsToast.show();
+    
+    // Remove toast after it's hidden
+    toast.addEventListener('hidden.bs.toast', function () {
+        toast.remove();
+    });
+}
 </script>
 {% endblock %}

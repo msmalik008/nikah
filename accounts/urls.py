@@ -22,7 +22,7 @@ urlpatterns = [
     path('profile/edit/', views.ProfileUpdateView.as_view(), name='profile_edit'),
     path('profile/<int:user_id>/', views.ViewProfileView.as_view(), name='view_profile'),
 
-    path('api/people-nearby/', views.PeopleNearbyView.as_view(), name='people_nearby'),
+    path('people-nearby/', views.PeopleNearbyView.as_view(), name='people_nearby'),
     
     # Account Settings & Security
     path('settings/', views.AccountSettingsView.as_view(), name='account_settings'),

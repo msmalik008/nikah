@@ -592,7 +592,14 @@ function loadPeopleNearby() {
         }
     });
 }
+document.addEventListener("DOMContentLoaded", function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get("tab");
 
+    if (tab === "discover") {
+        loadPeopleNearby();
+    }
+});
 // Other functions remain the same...
 </script>
 {% endblock %}

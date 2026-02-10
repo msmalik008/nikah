@@ -1,4 +1,5 @@
-# useractivity/urls.py
+# useractivity/urls.py - Add these URLs
+
 from django.urls import path
 from . import views
 
@@ -7,6 +8,11 @@ app_name = 'useractivity'
 urlpatterns = [
     # Timeline
     path('timeline/', views.TimelineView.as_view(), name='timeline'),
+    
+    # API endpoints
+    path('api/posts/', views.PostAPIView.as_view(), name='api_posts'),
+    path('api/activity/recent/', views.RecentActivityAPIView.as_view(), name='recent_activity'),
+    path('api/create-post/', views.CreatePostView.as_view(), name='create_post_api'),
     
     # Post actions
     path('post/create/', views.CreatePostView.as_view(), name='create_post'),
@@ -18,6 +24,11 @@ urlpatterns = [
     
     # Comment actions
     path('comment/<int:comment_id>/like/', views.LikeCommentView.as_view(), name='like_comment'),
+    path('comment/<int:comment_id>/delete/', views.DeleteCommentView.as_view(), name='delete_comment'),
+    
+    # Utility endpoints
+    path('post/<int:post_id>/comments/', views.get_post_comments, name='get_post_comments'),
+    path('post/<int:post_id>/likes/', views.get_post_likes, name='get_post_likes'),
     
     # Activity stream
     path('activity/', views.ActivityStreamView.as_view(), name='activity_stream'),

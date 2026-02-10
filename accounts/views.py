@@ -907,7 +907,6 @@ class PeopleNearbyView(LoginRequiredMixin, View):
             base_query = UserProfile.objects.filter(
                 is_visible=True,
                 approved=True,
-                completed=True
             ).exclude(user=request.user).select_related('user').only(
                 'user__username', 'age', 'gender', 'city', 'country', 
                 'sect', 'education', 'practice_level', 'profile_pic',

@@ -3,8 +3,8 @@ from django.views import View
 from django.views.generic import ListView, CreateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from django.http import JsonResponse
-from django.db.models import Q, Count
+from django.http import JsonResponse, HttpResponse
+from django.db.models import Q, Count, Prefetch
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.contrib import messages
 from django.utils import timezone
@@ -13,102 +13,151 @@ from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from datetime import timedelta
-
 from .models import Post, Comment, PostLike, CommentLike, Share, Bookmark, Activity
 from .forms import PostForm, CommentForm, ShareForm
 from friendship.models import Friendship
+import json
 
+import logging
+logger = logging.getLogger(__name__)
+
+
+# useractivity/views.py - FIXED TimelineView
 
 class TimelineView(LoginRequiredMixin, View):
     """Main timeline view"""
-    template_name = 'useractivity/timeline.html'
-    
+    template_name = "useractivity/timeline.html"
+
     def get(self, request):
         user = request.user
-        
-        # Get user's friends
+        logger.info(f"TimelineView accessed by {user.username}")
+
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return self._get_ajax_posts(request, user)
+
+        return self._get_full_page(request, user)
+
+    # --------------------------------------------------
+    # Full page timeline
+    # --------------------------------------------------
+
+    def _get_full_page(self, request, user):
         friends = Friendship.get_friends(user)
         friend_ids = [f.id for f in friends]
-        
-        # Get posts from user and friends
-        posts = Post.objects.filter(
-            Q(user=user) | Q(user_id__in=friend_ids),
-            is_active=True
-        ).select_related(
-            'user__userprofile'
-        ).prefetch_related(
-            'comments__user__userprofile',
-            'likes__user',
-            'shares__user',
-            'bookmarks'
-        ).order_by('-created_at')
-        
-        # Paginate posts
-        paginator = Paginator(posts, 20)
-        page = request.GET.get('page')
-        
+
+        posts_qs = (
+            Post.objects.filter(
+                Q(user=user) | Q(user_id__in=friend_ids),
+                is_active=True,
+            )
+            .select_related("user__userprofile")
+            .prefetch_related(
+                Prefetch(
+                    "comments",
+                    queryset=Comment.objects.select_related(
+                        "user__userprofile"
+                    ).order_by("-created_at"),
+                ),
+                Prefetch(
+                    "likes",
+                    queryset=PostLike.objects.only("id", "user_id"),
+                ),
+            )
+            .annotate(
+                likes_total=Count("likes", distinct=True),
+                comments_total=Count("comments", distinct=True),
+            )
+            .order_by("-created_at")
+        )
+
+
+        paginator = Paginator(posts_qs, 20)
+        page_number = request.GET.get("page", 1)
+
         try:
-            posts_page = paginator.page(page)
+            posts_page = paginator.page(page_number)
         except PageNotAnInteger:
             posts_page = paginator.page(1)
         except EmptyPage:
             posts_page = paginator.page(paginator.num_pages)
-        
-        # Mark user interactions
+
+        # User interactions (bulk)
+        post_ids = [p.id for p in posts_page]
+
+        user_likes = set(
+            PostLike.objects.filter(
+                user=user, post_id__in=post_ids
+            ).values_list("post_id", flat=True)
+        )
+
+        user_bookmarks = set(
+            Bookmark.objects.filter(
+                user=user, post_id__in=post_ids
+            ).values_list("post_id", flat=True)
+        )
+
         for post in posts_page:
-            post.user_liked = post.likes.filter(user=user).exists()
-            post.user_bookmarked = post.bookmarks.filter(user=user).exists()
-        
+            post.user_liked = post.id in user_likes
+            post.user_bookmarked = post.id in user_bookmarks
+
         context = {
-            'posts': posts_page,
-            'post_form': PostForm(),
-            'comment_form': CommentForm(),
-            'friends_count': len(friend_ids),
-            'is_paginated': paginator.num_pages > 1,
-            'page_obj': posts_page,
-            'paginator': paginator,
+            "posts": posts_page,
+            "post_form": PostForm(),
+            "comment_form": CommentForm(),
+            "friends_count": len(friend_ids),
+            "is_paginated": paginator.num_pages > 1,
+            "page_obj": posts_page,
+            "paginator": paginator,
         }
-        
+
+        logger.info(f"Rendering timeline with {posts_page.paginator.count} posts")
         return render(request, self.template_name, context)
 
+    # --------------------------------------------------
+    # AJAX posts (infinite scroll / refresh)
+    # --------------------------------------------------
 
-class CreatePostView(LoginRequiredMixin, CreateView):
-    """Create a new post"""
-    model = Post
-    form_class = PostForm
-    http_method_names = ['post']
-    
-    def form_valid(self, form):
-        post = form.save(commit=False)
-        post.user = self.request.user
-        post.save()
-        
-        # Create activity
-        Activity.objects.create(
-            user=self.request.user,
-            activity_type='post_created',
-            post=post
+    def _get_ajax_posts(self, request, user):
+        friends = Friendship.get_friends(user)
+        friend_ids = [f.id for f in friends]
+
+        posts = (
+            Post.objects.filter(
+                Q(user=user) | Q(user_id__in=friend_ids),
+                is_active=True,
+            )
+            .select_related("user__userprofile")
+            .annotate(
+                likes_count=Count("likes", distinct=True),
+                comments_count=Count("comments", distinct=True),
+            )
+            .order_by("-created_at")[:20]
         )
-        
-        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': True,
-                'post_id': post.id,
-                'message': 'Post created successfully'
+
+        posts_data = []
+        for post in posts:
+            posts_data.append({
+                "id": post.id,
+                "content": post.content,
+                "image": post.image.url if post.image else None,
+                "created_at": post.created_at.strftime("%b %d, %Y %I:%M %p"),
+                "user": {
+                    "username": post.user.username,
+                    "profile_pic": (
+                        post.user.userprofile.profile_pic.url
+                        if post.user.userprofile.profile_pic
+                        else None
+                    ),
+                },
+                "likes_count": post.likes_count,
+                "comments_count": post.comments_count,
             })
-        
-        messages.success(self.request, 'Post created successfully')
-        return redirect('useractivity:timeline')
-    
-    def form_invalid(self, form):
-        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': False,
-                'errors': form.errors
-            })
-        
-        messages.error(self.request, 'Error creating post')
-        return redirect('useractivity:timeline')
+
+        return JsonResponse({
+            "success": True,
+            "posts": posts_data,
+            "count": len(posts_data),
+        })
 
 
 class LikePostView(LoginRequiredMixin, View):
@@ -445,3 +494,98 @@ def get_post_likes(request, post_id):
             'success': False,
             'error': 'Post not found',
         })
+
+
+
+class RecentActivityAPIView(LoginRequiredMixin, View):
+    """API endpoint for recent activity"""
+    
+    def get(self, request):
+        from accounts.models import ActivityLog
+        
+        activities = ActivityLog.objects.filter(
+            Q(user=request.user) | Q(target_user=request.user)
+        ).select_related('user__userprofile', 'target_user__userprofile').order_by('-created_at')[:5]
+        
+        activities_data = []
+        for activity in activities:
+            activities_data.append({
+                'id': activity.id,
+                'type': activity.get_activity_type_display(),
+                'user': activity.user.username,
+                'target_user': activity.target_user.username if activity.target_user else None,
+                'created_at': activity.created_at.strftime('%I:%M %p'),
+                'description': self._get_activity_description(activity)
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'activities': activities_data
+        })
+    
+    def _get_activity_description(self, activity):
+        """Generate human-readable activity description"""
+        if activity.target_user:
+            return f"{activity.user.username} {activity.get_activity_type_display().lower()} {activity.target_user.username}"
+        return f"{activity.user.username} {activity.get_activity_type_display().lower()}"
+
+
+class PostAPIView(LoginRequiredMixin, View):
+    """API endpoint for posts"""
+    
+    def get(self, request):
+        user = request.user
+        friends = Friendship.get_friends(user)
+        friend_ids = [f.id for f in friends]
+        
+        posts = Post.objects.filter(
+            Q(user=user) | Q(user_id__in=friend_ids),
+            is_active=True
+        ).select_related('user__userprofile').order_by('-created_at')[:20]
+        
+        posts_data = []
+        for post in posts:
+            posts_data.append({
+                'id': post.id,
+                'content': post.content,
+                'image': post.image.url if post.image else None,
+                'created_at': post.created_at.strftime('%b %d, %Y %I:%M %p'),
+                'user': {
+                    'id': post.user.id,
+                    'username': post.user.username,
+                    'profile_pic': post.user.userprofile.profile_pic.url if post.user.userprofile.profile_pic else '/static/img/default-avatar.png',
+                },
+                'likes_count': post.likes_count,
+                'comments_count': post.comments_count,
+                'user_liked': post.likes.filter(user=user).exists(),
+                'user_bookmarked': post.bookmarks.filter(user=user).exists(),
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'posts': posts_data,
+            'friends_count': len(friend_ids)
+        })
+
+
+class CreatePostView(LoginRequiredMixin, View):
+    """Create post via API"""
+    
+    def post(self, request):
+        form = PostForm(request.POST, request.FILES)
+        
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.user = request.user
+            post.save()
+            
+            return JsonResponse({
+                'success': True,
+                'post_id': post.id,
+                'message': 'Post created successfully'
+            })
+        
+        return JsonResponse({
+            'success': False,
+            'errors': form.errors
+        }, status=400)
