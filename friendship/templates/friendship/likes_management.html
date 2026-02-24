@@ -111,124 +111,95 @@
 
 {% block extra_js %}
 <script>
-$(document).ready(function() {
-    // Load initial tab (mutual)
+document.addEventListener('DOMContentLoaded', function() {
     loadTab('mutual');
     
-    // Tab click handler
-    $('.nav-tabs .nav-link').on('click', function(e) {
-        e.preventDefault();
-        
-        // Update active state
-        $('.nav-tabs .nav-link').removeClass('active');
-        $(this).addClass('active');
-        
-        // Load tab content
-        const tab = $(this).data('tab');
-        const url = $(this).data('url');
-        loadTab(tab, url);
+    document.querySelectorAll('.nav-tabs .nav-link').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelectorAll('.nav-tabs .nav-link').forEach(l => l.classList.remove('active'));
+            this.classList.add('active');
+            loadTab(this.dataset.tab, this.dataset.url);
+        });
     });
     
     function loadTab(tab, url) {
-        console.log('Loading tab:', tab, 'from URL:', url);
-        
         if (!url) {
-            console.error('No URL provided for tab:', tab);
-            return;
+            const link = document.querySelector(`.nav-tabs .nav-link[data-tab="${tab}"]`);
+            url = link ? link.dataset.url : null;
         }
+        if (!url) return;
         
-        $('#likes-tab-content').html(`
+        document.getElementById('likes-tab-content').innerHTML = `
             <div class="text-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-            </div>
-        `);
+                <div class="spinner-border text-primary"></div>
+            </div>`;
         
-        $.ajax({
-            url: url,
-            type: 'GET',
-            success: function(data) {
-                console.log('AJAX success, data length:', data.length);
-                $('#likes-tab-content').html(data);
-                initializeTabButtons();
-            },
-            error: function(xhr, status, error) {
-                console.error('AJAX error:', status, error);
-                console.error('Response:', xhr.responseText);
-                $('#likes-tab-content').html(`
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => {
+                if (!r.ok) throw new Error(r.statusText);
+                return r.text();
+            })
+            .then(html => {
+                document.getElementById('likes-tab-content').innerHTML = html;
+                initializeButtons();
+            })
+            .catch(err => {
+                document.getElementById('likes-tab-content').innerHTML = `
                     <div class="text-center py-5">
                         <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
-                        <h4>Error Loading Content</h4>
-                        <p class="text-muted">${xhr.status} ${xhr.statusText}</p>
-                    </div>
-                `);
-            }
-        });
+                        <h4>Error</h4>
+                        <p class="text-muted">${err.message}</p>
+                    </div>`;
+            });
     }
     
-    function initializeTabButtons() {
-        // Unlike button handler
-        $('.unlike-btn').off('click').on('click', function() {
-            const userId = $(this).data('user-id');
-            const username = $(this).data('username');
-            
-            if (confirm(`Unlike ${username}?`)) {
-                $.ajax({
-                    url: `/friends/unlike/${userId}/`,
-                    type: 'POST',
-                    headers: {'X-CSRFToken': getCookie('csrftoken')},
-                    success: function(response) {
-                        if (response.success) {
-                            $(`.like-item[data-user-id="${userId}"]`).fadeOut(300, function() {
-                                $(this).remove();
-                                updateTabCounts();
-                            });
-                        } else {
-                            alert(response.message || 'Error unliking user');
-                        }
-                    },
-                    error: function() {
-                        alert('Error unliking user');
-                    }
-                });
-            }
+    function initializeButtons() {
+        document.querySelectorAll('.unlike-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const userId = this.dataset.userId;
+                const username = this.dataset.username;
+                if (confirm(`Unlike ${username}?`)) {
+                    fetch(`/friends/unlike/${userId}/`, {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.querySelector(`.like-item[data-user-id="${userId}"]`).remove();
+                            updateTabCounts();
+                        } else alert(data.message);
+                    });
+                }
+            });
         });
         
-        // Like back button handler
-        $('.like-back-btn').off('click').on('click', function() {
-            const userId = $(this).data('user-id');
-            const username = $(this).data('username');
-            
-            if (confirm(`Like back ${username}?`)) {
-                $.ajax({
-                    url: `/friends/like/${userId}/`,
-                    type: 'POST',
-                    headers: {'X-CSRFToken': getCookie('csrftoken')},
-                    success: function(response) {
-                        if (response.success) {
-                            $(`.like-item[data-user-id="${userId}"]`).fadeOut(300, function() {
-                                $(this).remove();
-                                updateTabCounts();
-                            });
-                            showNotification(response.message, 'success');
-                        } else {
-                            alert(response.message || 'Error liking user');
-                        }
-                    },
-                    error: function() {
-                        alert('Error liking user');
-                    }
-                });
-            }
+        document.querySelectorAll('.like-back-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const userId = this.dataset.userId;
+                const username = this.dataset.username;
+                if (confirm(`Like back ${username}?`)) {
+                    fetch(`/friends/like/${userId}/`, {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.querySelector(`.like-item[data-user-id="${userId}"]`).remove();
+                            updateTabCounts();
+                            showNotification(data.message, 'success');
+                        } else alert(data.message);
+                    });
+                }
+            });
         });
     }
     
     function updateTabCounts() {
-        // Refresh counts by reloading the current tab
-        const activeTab = $('.nav-tabs .nav-link.active').data('tab');
-        const url = $(`.nav-tabs .nav-link[data-tab="${activeTab}"]`).data('url');
-        loadTab(activeTab, url);
+        const activeTab = document.querySelector('.nav-tabs .nav-link.active');
+        if (activeTab) loadTab(activeTab.dataset.tab, activeTab.dataset.url);
     }
     
     function getCookie(name) {
@@ -247,22 +218,15 @@ $(document).ready(function() {
     }
     
     function showNotification(message, type) {
-        const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
-        const notification = $(`
-            <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `);
-        
-        $('.card-body').prepend(notification);
-        
-        setTimeout(() => {
-            notification.alert('close');
-        }, 5000);
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert ${type === 'success' ? 'alert-success' : 'alert-danger'} alert-dismissible fade show`;
+        alertDiv.setAttribute('role', 'alert');
+        alertDiv.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+        document.querySelector('.card-body').prepend(alertDiv);
+        setTimeout(() => alertDiv.remove(), 5000);
     }
     
-    initializeTabButtons();
+    initializeButtons();
 });
 </script>
 {% endblock %}

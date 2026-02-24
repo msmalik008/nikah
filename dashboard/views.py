@@ -122,8 +122,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     )
                 )
                 .annotate(
-                    likes_count=Count('likes', distinct=True),
-                    comments_count=Count('comments', distinct=True)
+                    post_likes_count=Count('likes', distinct=True),
+                    post_comments_count=Count('comments', distinct=True)
                 )
                 .order_by('-created_at')[:5]  # Limit to 5 posts
             )
@@ -144,8 +144,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 for post in posts_list:
                     post.user_liked = post.id in user_likes
                     # Add these for template compatibility
-                    post.likes_count = getattr(post, 'likes_count', 0)
-                    post.comments_count = getattr(post, 'comments_count', 0)
+                    post.post_likes_count = getattr(post, 'post_likes_count', 0)
+                    post.post_comments_count = getattr(post, 'post_comments_count', 0)
             
             return posts_list
             

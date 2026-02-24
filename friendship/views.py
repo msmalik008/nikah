@@ -752,7 +752,7 @@ class LikesManagementView(LoginRequiredMixin, TemplateView):
 
 
 class MutualLikesView(LoginRequiredMixin, ListView):
-    """Display mutual likes as HTML (for AJAX tabs)"""
+    """Return HTML fragment for mutual likes"""
     template_name = 'friendship/likes/mutual_likes_list.html'
     context_object_name = 'likes'
     paginate_by = 20
@@ -768,7 +768,7 @@ class MutualLikesView(LoginRequiredMixin, ListView):
 
 
 class SentLikesView(LoginRequiredMixin, ListView):
-    """Display sent likes as HTML (for AJAX tabs)"""
+    """Return HTML fragment for sent likes"""
     template_name = 'friendship/likes/sent_likes_list.html'
     context_object_name = 'likes'
     paginate_by = 20
@@ -784,7 +784,7 @@ class SentLikesView(LoginRequiredMixin, ListView):
 
 
 class ReceivedLikesView(LoginRequiredMixin, ListView):
-    """Display received likes as HTML (for AJAX tabs)"""
+    """Return HTML fragment for received likes"""
     template_name = 'friendship/likes/received_likes_list.html'
     context_object_name = 'likes'
     paginate_by = 20
