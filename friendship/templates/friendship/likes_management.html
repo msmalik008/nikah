@@ -1,4 +1,5 @@
-{% extends 'dashboard/base.html' %}
+
+{% extends 'accounts/base.html' %}
 {% load static %}
 {% load humanize %}
 
@@ -112,27 +113,39 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Load initial tab (mutual)
     loadTab('mutual');
     
+    // Tab click handler
     document.querySelectorAll('.nav-tabs .nav-link').forEach(function(link) {
         link.addEventListener('click', function(e) {
             e.preventDefault();
-            document.querySelectorAll('.nav-tabs .nav-link').forEach(l => l.classList.remove('active'));
+            
+            // Update active state
+            document.querySelectorAll('.nav-tabs .nav-link').forEach(function(l) {
+                l.classList.remove('active');
+            });
             this.classList.add('active');
-            loadTab(this.dataset.tab, this.dataset.url);
+            
+            // Load tab content
+            const tab = this.getAttribute('data-tab');
+            const url = this.getAttribute('data-url');
+            loadTab(tab, url);
         });
     });
     
     function loadTab(tab, url) {
         if (!url) {
             const link = document.querySelector(`.nav-tabs .nav-link[data-tab="${tab}"]`);
-            url = link ? link.dataset.url : null;
+            url = link ? link.getAttribute('data-url') : null;
         }
         if (!url) return;
         
         document.getElementById('likes-tab-content').innerHTML = `
             <div class="text-center py-5">
-                <div class="spinner-border text-primary"></div>
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
             </div>`;
         
         fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
@@ -145,20 +158,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 initializeButtons();
             })
             .catch(err => {
+                console.error('Error loading tab:', err);
                 document.getElementById('likes-tab-content').innerHTML = `
                     <div class="text-center py-5">
                         <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
-                        <h4>Error</h4>
+                        <h4>Error Loading Content</h4>
                         <p class="text-muted">${err.message}</p>
                     </div>`;
             });
     }
     
     function initializeButtons() {
+        // Unlike button handler
         document.querySelectorAll('.unlike-btn').forEach(btn => {
             btn.addEventListener('click', function() {
-                const userId = this.dataset.userId;
-                const username = this.dataset.username;
+                const userId = this.getAttribute('data-user-id');
+                const username = this.getAttribute('data-username');
+                const currentTab = document.querySelector('.nav-tabs .nav-link.active').getAttribute('data-tab');
+                
                 if (confirm(`Unlike ${username}?`)) {
                     fetch(`/friends/unlike/${userId}/`, {
                         method: 'POST',
@@ -167,39 +184,76 @@ document.addEventListener('DOMContentLoaded', function() {
                     .then(r => r.json())
                     .then(data => {
                         if (data.success) {
+                            // Remove item from current list
                             document.querySelector(`.like-item[data-user-id="${userId}"]`).remove();
-                            updateTabCounts();
-                        } else alert(data.message);
-                    });
+                            // Update counts
+                            updateLikesCounts(data.counts);
+                            
+                            // If we're in mutual likes tab and we unlike, switch to received likes
+                            if (currentTab === 'mutual') {
+                                // Switch to received likes tab
+                                document.querySelector('.nav-tabs .nav-link[data-tab="received"]').click();
+                            }
+                        } else {
+                            alert(data.message || 'Error unliking user');
+                        }
+                    })
+                    .catch(() => alert('Error unliking user'));
                 }
             });
         });
         
+        // Like back button handler
+        // Like back button handler
         document.querySelectorAll('.like-back-btn').forEach(btn => {
             btn.addEventListener('click', function() {
-                const userId = this.dataset.userId;
-                const username = this.dataset.username;
+                const userId = this.getAttribute('data-user-id');
+                const username = this.getAttribute('data-username');
+                
                 if (confirm(`Like back ${username}?`)) {
                     fetch(`/friends/like/${userId}/`, {
                         method: 'POST',
                         headers: { 'X-CSRFToken': getCookie('csrftoken') }
                     })
-                    .then(r => r.json())
+                    .then(r => {
+                        if (!r.ok) {
+                            throw new Error(`HTTP error! status: ${r.status}`);
+                        }
+                        return r.json();
+                    })
                     .then(data => {
+                        console.log('Response:', data);  // Debug
                         if (data.success) {
                             document.querySelector(`.like-item[data-user-id="${userId}"]`).remove();
-                            updateTabCounts();
-                            showNotification(data.message, 'success');
-                        } else alert(data.message);
+                            updateLikesCounts(data.counts);
+                            document.querySelector('.nav-tabs .nav-link[data-tab="mutual"]').click();
+                        } else {
+                            alert(data.message || 'Error liking user');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error liking user: ' + error.message);
                     });
                 }
             });
         });
+        
     }
     
-    function updateTabCounts() {
-        const activeTab = document.querySelector('.nav-tabs .nav-link.active');
-        if (activeTab) loadTab(activeTab.dataset.tab, activeTab.dataset.url);
+    function updateLikesCounts(counts) {
+        // Update all badges
+        const totalBadge = document.getElementById('total-likes-badge');
+        const mutualBadge = document.getElementById('mutual-likes-badge');
+        const sentBadge = document.getElementById('sent-likes-badge');
+        const receivedBadge = document.getElementById('received-likes-badge');
+        
+        if (totalBadge) {
+            totalBadge.textContent = counts.mutual_likes_count + counts.sent_likes_count + counts.received_likes_count;
+        }
+        if (mutualBadge) mutualBadge.textContent = counts.mutual_likes_count;
+        if (sentBadge) sentBadge.textContent = counts.sent_likes_count;
+        if (receivedBadge) receivedBadge.textContent = counts.received_likes_count;
     }
     
     function getCookie(name) {
@@ -217,15 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return cookieValue;
     }
     
-    function showNotification(message, type) {
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert ${type === 'success' ? 'alert-success' : 'alert-danger'} alert-dismissible fade show`;
-        alertDiv.setAttribute('role', 'alert');
-        alertDiv.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
-        document.querySelector('.card-body').prepend(alertDiv);
-        setTimeout(() => alertDiv.remove(), 5000);
-    }
-    
+    // Initialize buttons on page load
     initializeButtons();
 });
 </script>

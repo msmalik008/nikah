@@ -22,6 +22,7 @@ urlpatterns = [
     path('profile/edit/', views.ProfileUpdateView.as_view(), name='profile_edit'),
     path('profile/<int:user_id>/', views.ViewProfileView.as_view(), name='view_profile'),
 
+    path("people/", views.PeopleNearbyPageView.as_view(), name="find_friends"),
     path("people/nearby/", views.PeopleNearbyPageView.as_view(), name="people_nearby"),
     
     # Account Settings & Security

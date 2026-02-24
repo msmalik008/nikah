@@ -1,5 +1,6 @@
 {% load static %}
 {% load humanize %}
+
 {% if likes %}
     <div class="list-group">
         {% for like in likes %}
@@ -25,7 +26,9 @@
                                         {{ liker_user.username }}
                                     </a>
                                 </h6>
-                                <small class="text-muted">Liked you {{ like.created_at|naturaltime }}</small>
+                                <small class="text-muted">
+                                    Liked you {{ like.created_at|naturaltime }}
+                                </small>
                                 {% with user_profile=liker_user.userprofile %}
                                     {% if user_profile.city and user_profile.country and user_profile.show_location %}
                                         <br><small class="text-muted">
@@ -53,6 +56,7 @@
             {% endwith %}
         {% endfor %}
     </div>
+    
     {% if is_paginated %}
         {% include 'includes/pagination.html' with page_obj=page_obj %}
     {% endif %}

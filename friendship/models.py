@@ -415,7 +415,7 @@ class ProfileLike(models.Model):
         except Exception as e:
             logger.error(f"Error removing like: {e}", exc_info=True)
             return False
-    
+
     @classmethod
     def get_mutual_matches(cls, user):
         """Get all mutual matches for a user with caching"""
@@ -431,7 +431,7 @@ class ProfileLike(models.Model):
         ).select_related('liker__userprofile', 'liked__userprofile')
         
         cache.set(cache_key, matches, 300)
-        return matches
+        return matches  # Return QuerySet, not list
 
     @classmethod
     def get_likes_received(cls, user):
@@ -448,7 +448,7 @@ class ProfileLike(models.Model):
         ).select_related('liker__userprofile')
         
         cache.set(cache_key, likes, 120)
-        return likes
+        return likes  # Return QuerySet, not list
 
     @classmethod
     def get_likes_given(cls, user):
@@ -465,4 +465,4 @@ class ProfileLike(models.Model):
         ).select_related('liked__userprofile')
         
         cache.set(cache_key, likes, 120)
-        return likes
+        return likes  # Return QuerySet, not list
