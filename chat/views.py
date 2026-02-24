@@ -491,7 +491,7 @@ def send_message(request, user_id):
         
         return redirect('view_profile', user_id=user_id)
     
-    return redirect('dashboard', tab='discover')
+    return redirect('dashboard:dashboard')
 
 
 @login_required

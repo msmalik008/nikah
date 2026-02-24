@@ -16,6 +16,22 @@
         margin-bottom: 10px;
         text-align: left;
         padding: 12px 20px;
+        transition: all 0.3s ease;
+    }
+    
+    .action-btn i {
+        width: 20px;
+        text-align: center;
+    }
+    
+    .action-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .action-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
     }
     
     .info-item {
@@ -48,6 +64,53 @@
         align-items: center;
         justify-content: center;
         flex-direction: column;
+    }
+    
+    .friend-badge {
+        display: inline-block;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+    
+    .friend-badge.friends {
+        background: rgba(40, 167, 69, 0.2);
+        color: #28a745;
+        border: 1px solid #28a745;
+    }
+    
+    .friend-badge.request-sent {
+        background: rgba(255, 193, 7, 0.2);
+        color: #ffc107;
+        border: 1px solid #ffc107;
+    }
+    
+    .friend-badge.request-received {
+        background: rgba(23, 162, 184, 0.2);
+        color: #17a2b8;
+        border: 1px solid #17a2b8;
+    }
+    
+    .friend-badge.blocked {
+        background: rgba(220, 53, 69, 0.2);
+        color: #dc3545;
+        border: 1px solid #dc3545;
+    }
+    
+    .loading-spinner {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 5px;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
     }
 </style>
 {% endblock %}
@@ -86,19 +149,40 @@
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <h1 class="mb-1">{{ viewed_user.username }}</h1>
-                            <div class="d-flex align-items-center mb-3">
+                            <div class="d-flex align-items-center mb-3 flex-wrap">
                                 {% if profile.age and profile.show_age %}
-                                    <span class="badge bg-primary me-2">{{ profile.age }}</span>
+                                    <span class="badge bg-primary me-2 mb-2">{{ profile.age }}</span>
                                 {% endif %}
                                 
                                 {% if profile.gender %}
-                                    <span class="badge bg-secondary me-2">{{ profile.get_gender_display }}</span>
+                                    <span class="badge bg-secondary me-2 mb-2">{{ profile.get_gender_display }}</span>
                                 {% endif %}
                                 
                                 {% if profile.city and profile.show_location %}
-                                    <span class="badge bg-info">
+                                    <span class="badge bg-info mb-2">
                                         <i class="fas fa-map-marker-alt me-1"></i>
                                         {{ profile.city }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Friend Status Badge -->
+                            <div id="friend-status-container">
+                                {% if friendship.is_friend %}
+                                    <span class="friend-badge friends">
+                                        <i class="fas fa-check-circle me-1"></i> Friends
+                                    </span>
+                                {% elif friendship.status == 'pending_sender' %}
+                                    <span class="friend-badge request-sent">
+                                        <i class="fas fa-clock me-1"></i> Request Sent
+                                    </span>
+                                {% elif friendship.status == 'pending_receiver' %}
+                                    <span class="friend-badge request-received">
+                                        <i class="fas fa-hourglass-half me-1"></i> Request Received
+                                    </span>
+                                {% elif friendship.is_blocked %}
+                                    <span class="friend-badge blocked">
+                                        <i class="fas fa-ban me-1"></i> Blocked
                                     </span>
                                 {% endif %}
                             </div>
@@ -110,8 +194,24 @@
                                 <i class="fas fa-ellipsis-v"></i>
                             </button>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#"><i class="fas fa-flag me-2"></i>Report</a></li>
-                                <li><a class="dropdown-item" href="#"><i class="fas fa-ban me-2"></i>Block</a></li>
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="reportUser({{ viewed_user.id }}, '{{ viewed_user.username }}')">
+                                        <i class="fas fa-flag me-2"></i>Report
+                                    </a>
+                                </li>
+                                {% if not friendship.is_blocked %}
+                                <li>
+                                    <a class="dropdown-item text-danger" href="#" onclick="blockUser({{ viewed_user.id }}, '{{ viewed_user.username }}')">
+                                        <i class="fas fa-ban me-2"></i>Block
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li>
+                                    <a class="dropdown-item text-success" href="#" onclick="unblockUser({{ viewed_user.id }}, '{{ viewed_user.username }}')">
+                                        <i class="fas fa-check me-2"></i>Unblock
+                                    </a>
+                                </li>
+                                {% endif %}
                             </ul>
                         </div>
                     </div>
@@ -175,7 +275,7 @@
                         <strong>Religious Sect:</strong>
                         <span class="float-end">
                             {% if profile.show_sect and profile.sect %}
-                                {{ profile.sect }}
+                                {{ profile.get_sect_display }}
                             {% else %}
                                 Hidden
                             {% endif %}
@@ -234,15 +334,55 @@
                 <div class="card-body">
                     <h5 class="card-title">Actions</h5>
                     
-                    <button class="btn btn-primary action-btn">
-                        <i class="fas fa-heart me-2"></i> Like Profile
+                    <!-- Like Button -->
+                    <button class="btn {% if like.user_liked %}btn-danger{% else %}btn-primary{% endif %} action-btn" 
+                            onclick="likeProfile({{ viewed_user.id }}, this)"
+                            id="like-btn-{{ viewed_user.id }}"
+                            data-liked="{% if like.user_liked %}true{% else %}false{% endif %}"
+                            {% if friendship.is_blocked %}disabled{% endif %}>
+                        <i class="fas fa-heart me-2"></i> 
+                        <span class="btn-text">{% if like.user_liked %}Liked{% else %}Like Profile{% endif %}</span>
                     </button>
                     
-                    <button class="btn btn-outline-primary action-btn">
+                    <!-- Message Button -->
+                    <a href="{% url 'chat:send_message' viewed_user.id %}" 
+                       class="btn btn-outline-primary action-btn {% if friendship.is_blocked %}disabled{% endif %}"
+                       {% if friendship.is_blocked %}onclick="return false;"{% endif %}>
                         <i class="fas fa-comment me-2"></i> Send Message
-                    </button>
+                    </a>
                     
-                    <button class="btn btn-outline-light action-btn">
+                    <!-- Friend Request Button -->
+                    <div id="friend-request-container">
+                        {% if friendship.is_friend %}
+                            <button class="btn btn-success action-btn" disabled>
+                                <i class="fas fa-check me-2"></i> Friends
+                            </button>
+                        {% elif friendship.status == 'pending_sender' %}
+                            <button class="btn btn-info action-btn" onclick="cancelFriendRequest({{ viewed_user.id }}, this)">
+                                <i class="fas fa-clock me-2"></i><span class="btn-text">Cancel Request</span>
+                            </button>
+                        {% elif friendship.status == 'pending_receiver' %}
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-success action-btn" onclick="acceptFriendRequest({{ viewed_user.id }}, this)">
+                                    <i class="fas fa-check me-2"></i> Accept
+                                </button>
+                                <button class="btn btn-danger action-btn" onclick="rejectFriendRequest({{ viewed_user.id }}, this)">
+                                    <i class="fas fa-times me-2"></i> Reject
+                                </button>
+                            </div>
+                        {% elif friendship.is_blocked %}
+                            <button class="btn btn-secondary action-btn" disabled>
+                                <i class="fas fa-ban me-2"></i> Blocked
+                            </button>
+                        {% else %}
+                            <button class="btn btn-outline-info action-btn" onclick="sendFriendRequest({{ viewed_user.id }}, this)">
+                                <i class="fas fa-user-plus me-2"></i><span class="btn-text">Add Friend</span>
+                            </button>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Share Button -->
+                    <button class="btn btn-outline-light action-btn" onclick="shareProfile({{ viewed_user.id }}, '{{ viewed_user.username }}')">
                         <i class="fas fa-share me-2"></i> Share Profile
                     </button>
                     
@@ -286,4 +426,383 @@
         </div>
     </div>
 </div>
+
+<!-- CSRF Token -->
+{% csrf_token %}
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+// Get CSRF token
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// Helper function for fetch with proper error handling
+async function fetchAPI(url, method = 'POST', data = {}) {
+    const response = await fetch(url, {
+        method: method,
+        headers: {
+            'X-CSRFToken': getCSRFToken(),
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+        },
+        body: method === 'POST' ? JSON.stringify(data) : null
+    });
+    
+    if (!response.ok) {
+        // Try to get error message from response
+        try {
+            const errorData = await response.json();
+            throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
+        } catch (e) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+    }
+    
+    return await response.json();
+}
+
+// Like/Unlike Profile
+async function likeProfile(userId, button) {
+    const btnText = button.querySelector('.btn-text');
+    const originalText = btnText ? btnText.innerHTML : button.innerHTML;
+    
+    // Show loading state
+    button.disabled = true;
+    if (btnText) {
+        btnText.innerHTML = 'Loading...';
+    } else {
+        button.innerHTML = 'Loading...';
+    }
+    
+    try {
+        const data = await fetchAPI(`/api/friends/like/${userId}/`);
+        
+        if (data.success) {
+            if (data.action === 'liked') {
+                button.classList.remove('btn-primary');
+                button.classList.add('btn-danger');
+                if (btnText) {
+                    btnText.innerHTML = 'Liked';
+                } else {
+                    button.innerHTML = '<i class="fas fa-heart me-2"></i> Liked';
+                }
+                button.dataset.liked = 'true';
+                showToast('Profile liked!', 'success');
+                
+                if (data.is_mutual) {
+                    showToast('It\'s a match! You both liked each other.', 'success');
+                }
+            } else {
+                button.classList.remove('btn-danger');
+                button.classList.add('btn-primary');
+                if (btnText) {
+                    btnText.innerHTML = 'Like Profile';
+                } else {
+                    button.innerHTML = '<i class="fas fa-heart me-2"></i> Like Profile';
+                }
+                button.dataset.liked = 'false';
+                showToast('Profile unliked', 'info');
+            }
+        } else {
+            showToast(data.error || 'Error processing request', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast(error.message || 'Network error. Please try again.', 'error');
+    } finally {
+        button.disabled = false;
+    }
+}
+
+// Send Friend Request
+async function sendFriendRequest(userId, button) {
+    const btnText = button.querySelector('.btn-text');
+    const originalText = btnText ? btnText.innerHTML : button.innerHTML;
+    
+    // Show loading state
+    button.disabled = true;
+    if (btnText) {
+        btnText.innerHTML = 'Sending...';
+    } else {
+        button.innerHTML = 'Sending...';
+    }
+    
+    try {
+        const data = await fetchAPI(`/api/friends/send/${userId}/`);
+        
+        if (data.success) {
+            // Update button to show sent state
+            button.classList.remove('btn-outline-info');
+            button.classList.add('btn-info');
+            button.innerHTML = '<i class="fas fa-clock me-2"></i><span class="btn-text">Request Sent</span>';
+            
+            // Update status badge
+            const statusContainer = document.getElementById('friend-status-container');
+            if (statusContainer) {
+                statusContainer.innerHTML = '<span class="friend-badge request-sent"><i class="fas fa-clock me-1"></i> Request Sent</span>';
+            }
+            
+            showToast('Friend request sent!', 'success');
+        } else {
+            showToast(data.message || 'Error sending request', 'error');
+            button.disabled = false;
+            if (btnText) {
+                btnText.innerHTML = originalText;
+            } else {
+                button.innerHTML = originalText;
+            }
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast(error.message || 'Network error. Please try again.', 'error');
+        button.disabled = false;
+        if (btnText) {
+            btnText.innerHTML = originalText;
+        } else {
+            button.innerHTML = originalText;
+        }
+    }
+}
+
+// Accept Friend Request
+async function acceptFriendRequest(userId, button) {
+    const container = document.getElementById('friend-request-container');
+    const originalHTML = container.innerHTML;
+    
+    // Show loading
+    container.innerHTML = '<button class="btn btn-info action-btn" disabled><span class="spinner-border spinner-border-sm me-2"></span>Processing...</button>';
+    
+    try {
+        const data = await fetchAPI(`/api/friends/accept/${userId}/`);
+        
+        if (data.success) {
+            // Replace with "Friends" button
+            container.innerHTML = '<button class="btn btn-success action-btn" disabled><i class="fas fa-check me-2"></i> Friends</button>';
+            
+            // Update status badge
+            const statusContainer = document.getElementById('friend-status-container');
+            if (statusContainer) {
+                statusContainer.innerHTML = '<span class="friend-badge friends"><i class="fas fa-check-circle me-1"></i> Friends</span>';
+            }
+            
+            showToast('Friend request accepted!', 'success');
+        } else {
+            container.innerHTML = originalHTML;
+            showToast(data.message || 'Error accepting request', 'error');
+            
+            // Debug: Check relationship status
+            fetch(`/api/friends/debug/${userId}/`)
+                .then(r => r.json())
+                .then(console.log)
+                .catch(console.error);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        container.innerHTML = originalHTML;
+        showToast(error.message || 'Network error. Please try again.', 'error');
+    }
+}
+
+// Reject Friend Request
+async function rejectFriendRequest(userId, button) {
+    const container = document.getElementById('friend-request-container');
+    const originalHTML = container.innerHTML;
+    
+    // Show loading
+    container.innerHTML = '<button class="btn btn-info action-btn" disabled><span class="spinner-border spinner-border-sm me-2"></span>Processing...</button>';
+    
+    try {
+        const data = await fetchAPI(`/api/friends/reject/${userId}/`);
+        
+        if (data.success) {
+            // Replace with "Add Friend" button
+            container.innerHTML = '<button class="btn btn-outline-info action-btn" onclick="sendFriendRequest(' + userId + ', this)"><i class="fas fa-user-plus me-2"></i><span class="btn-text">Add Friend</span></button>';
+            
+            // Remove status badge
+            const statusContainer = document.getElementById('friend-status-container');
+            if (statusContainer) {
+                statusContainer.innerHTML = '';
+            }
+            
+            showToast('Friend request rejected', 'info');
+        } else {
+            container.innerHTML = originalHTML;
+            showToast(data.message || 'Error rejecting request', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        container.innerHTML = originalHTML;
+        showToast(error.message || 'Network error. Please try again.', 'error');
+    }
+}
+
+// Cancel Friend Request
+async function cancelFriendRequest(userId, button) {
+    const container = document.getElementById('friend-request-container');
+    const originalHTML = container.innerHTML;
+    
+    // Show loading
+    container.innerHTML = '<button class="btn btn-info action-btn" disabled><span class="spinner-border spinner-border-sm me-2"></span>Cancelling...</button>';
+    
+    try {
+        const data = await fetchAPI(`/api/friends/cancel/${userId}/`);
+        
+        if (data.success) {
+            // Replace with "Add Friend" button
+            container.innerHTML = '<button class="btn btn-outline-info action-btn" onclick="sendFriendRequest(' + userId + ', this)"><i class="fas fa-user-plus me-2"></i><span class="btn-text">Add Friend</span></button>';
+            
+            // Remove status badge
+            const statusContainer = document.getElementById('friend-status-container');
+            if (statusContainer) {
+                statusContainer.innerHTML = '';
+            }
+            
+            showToast('Friend request cancelled', 'info');
+        } else {
+            container.innerHTML = originalHTML;
+            showToast(data.message || 'Error cancelling request', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        container.innerHTML = originalHTML;
+        showToast(error.message || 'Network error. Please try again.', 'error');
+    }
+}
+
+// Block User
+async function blockUser(userId, username) {
+    if (!confirm(`Are you sure you want to block ${username}? They won't be able to see your profile or contact you.`)) {
+        return;
+    }
+    
+    try {
+        const data = await fetchAPI(`/api/friends/block/${userId}/`);
+        
+        if (data.success) {
+            showToast(`${username} has been blocked`, 'warning');
+            // Reload the page to update all buttons
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showToast(data.message || 'Error blocking user', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast(error.message || 'Network error. Please try again.', 'error');
+    }
+}
+
+// Unblock User
+async function unblockUser(userId, username) {
+    if (!confirm(`Unblock ${username}?`)) {
+        return;
+    }
+    
+    try {
+        const data = await fetchAPI(`/api/friends/unblock/${userId}/`);
+        
+        if (data.success) {
+            showToast(`${username} has been unblocked`, 'success');
+            // Reload the page to update all buttons
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showToast(data.message || 'Error unblocking user', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast(error.message || 'Network error. Please try again.', 'error');
+    }
+}
+
+// Share Profile
+function shareProfile(userId, username) {
+    const profileUrl = window.location.origin + '/profile/' + userId + '/';
+    
+    if (navigator.share) {
+        navigator.share({
+            title: username + '\'s Profile',
+            text: 'Check out ' + username + '\'s profile',
+            url: profileUrl,
+        }).catch(() => {
+            // User cancelled share
+        });
+    } else {
+        // Fallback: Copy to clipboard
+        navigator.clipboard.writeText(profileUrl).then(() => {
+            showToast('Profile link copied to clipboard!', 'success');
+        }).catch(() => {
+            showToast('Failed to copy link', 'error');
+        });
+    }
+}
+
+// Toast Notification Function
+function showToast(message, type = 'info') {
+    // Create toast container if it doesn't exist
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.style.position = 'fixed';
+        toastContainer.style.top = '20px';
+        toastContainer.style.right = '20px';
+        toastContainer.style.zIndex = '9999';
+        document.body.appendChild(toastContainer);
+    }
+    
+    // Create toast
+    const toastId = 'toast-' + Date.now();
+    const toast = document.createElement('div');
+    toast.id = toastId;
+    
+    let bgColor = 'bg-info';
+    let icon = 'info-circle';
+    
+    if (type === 'success') {
+        bgColor = 'bg-success';
+        icon = 'check-circle';
+    } else if (type === 'error') {
+        bgColor = 'bg-danger';
+        icon = 'exclamation-circle';
+    } else if (type === 'warning') {
+        bgColor = 'bg-warning';
+        icon = 'exclamation-triangle';
+    }
+    
+    toast.className = `toast align-items-center text-white ${bgColor} border-0 mb-2`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="fas fa-${icon} me-2"></i>
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    // Show toast
+    const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+    bsToast.show();
+    
+    // Remove toast after it's hidden
+    toast.addEventListener('hidden.bs.toast', function () {
+        toast.remove();
+    });
+}
+
+// Simple debug - just log that script loaded
+console.log('Friendship script loaded');
+</script>
 {% endblock %}

@@ -1,0 +1,47 @@
+{% load friendship_tags %}
+
+{% get_relationship request.user target_user as relationship %}
+
+<div class="friend-request-btn-container">
+    {% if not relationship %}
+        <!-- No relationship - Show Add Friend -->
+        <button class="btn btn-outline-info action-btn" onclick="sendFriendRequest({{ target_user.id }}, this)">
+            <i class="fas fa-user-plus me-2"></i><span class="btn-text">Add Friend</span>
+        </button>
+    
+    {% elif relationship.status == 'friends' %}
+        <!-- Already friends -->
+        <button class="btn btn-success action-btn" disabled>
+            <i class="fas fa-check me-2"></i> Friends
+        </button>
+    
+    {% elif relationship.status == 'pending_sender' %}
+        <!-- Request sent by current user -->
+        <button class="btn btn-info action-btn" onclick="cancelFriendRequest({{ target_user.id }}, this)">
+            <i class="fas fa-clock me-2"></i><span class="btn-text">Cancel Request</span>
+        </button>
+    
+    {% elif relationship.status == 'pending_receiver' %}
+        <!-- Request received from target user -->
+        <div class="btn-group w-100" role="group">
+            <button class="btn btn-success action-btn" onclick="acceptFriendRequest({{ target_user.id }}, this)">
+                <i class="fas fa-check me-2"></i> Accept
+            </button>
+            <button class="btn btn-danger action-btn" onclick="rejectFriendRequest({{ target_user.id }}, this)">
+                <i class="fas fa-times me-2"></i> Reject
+            </button>
+        </div>
+    
+    {% elif relationship.status == 'blocked_by_a' %}
+        <!-- Current user blocked target user -->
+        <button class="btn btn-secondary action-btn" disabled>
+            <i class="fas fa-ban me-2"></i> Blocked
+        </button>
+    
+    {% elif relationship.status == 'blocked_by_b' %}
+        <!-- Target user blocked current user -->
+        <button class="btn btn-secondary action-btn" disabled>
+            <i class="fas fa-ban me-2"></i> Cannot Interact
+        </button>
+    {% endif %}
+</div>

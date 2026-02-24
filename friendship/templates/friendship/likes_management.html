@@ -1,0 +1,362 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar -->
+    <div class="col-lg-3 col-xl-2">
+        <div class="dashboard-nav">
+            <h4 class="mb-4">Likes</h4>
+            
+            <div class="nav flex-column">
+                <a href="{% url 'friendship:friends' %}" class="dashboard-nav-item">
+                    <i class="fas fa-users dashboard-nav-icon"></i>
+                    Friends
+                </a>
+                
+                <a href="{% url 'friendship:sent_requests' %}" class="dashboard-nav-item">
+                    <i class="fas fa-paper-plane dashboard-nav-icon"></i>
+                    Sent Requests
+                </a>
+
+                <a href="{% url 'friendship:received_requests' %}" class="dashboard-nav-item">
+                    <i class="fas fa-inbox dashboard-nav-icon"></i>
+                    Received Requests
+                </a>
+
+                <a href="{% url 'friendship:get_likes' %}" class="dashboard-nav-item active">
+                    <i class="fas fa-heart dashboard-nav-icon"></i>
+                    Likes
+                    {% with total_likes=mutual_likes_count|add:sent_likes_count|add:received_likes_count %}
+                        {% if total_likes > 0 %}
+                            <span class="badge bg-light text-dark ms-1">{{ total_likes }}</span>
+                        {% endif %}
+                    {% endwith %}
+                </a>
+
+                <div class="my-3" style="border-top: 1px solid rgba(255,255,255,0.1);"></div>
+                
+                <a href="{% url 'accounts:account_settings' %}" class="dashboard-nav-item">
+                    <i class="fas fa-cog dashboard-nav-icon"></i>
+                    Settings
+                </a>
+            </div>
+            
+            <!-- Profile Completion -->
+            <div class="progress-container mt-4">
+                <div class="progress-header">
+                    <span>Profile Strength</span>
+                    <span>{{ profile_completion }}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ profile_completion }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="col-lg-9 col-xl-10">
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="javascript:void(0)" 
+                           data-tab="mutual" 
+                           data-url="{% url 'friendship:mutual_likes' %}">
+                            Mutual Likes
+                            {% if mutual_likes_count > 0 %}
+                                <span class="badge bg-primary ms-1">{{ mutual_likes_count }}</span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="javascript:void(0)" 
+                           data-tab="sent" 
+                           data-url="{% url 'friendship:sent_likes' %}">
+                            Sent Likes
+                            {% if sent_likes_count > 0 %}
+                                <span class="badge bg-warning ms-1">{{ sent_likes_count }}</span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="javascript:void(0)" 
+                           data-tab="received" 
+                           data-url="{% url 'friendship:received_likes' %}">
+                            Received Likes
+                            {% if received_likes_count > 0 %}
+                                <span class="badge bg-success ms-1">{{ received_likes_count }}</span>
+                            {% endif %}
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <!-- Tab Content Container -->
+                <div id="likes-tab-content">
+                    <!-- Content will be loaded via AJAX -->
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Load initial tab (mutual)
+    loadTab('mutual');
+    
+    // Tab click handler
+    $('.nav-tabs .nav-link').on('click', function(e) {
+        e.preventDefault();
+        
+        // Update active state
+        $('.nav-tabs .nav-link').removeClass('active');
+        $(this).addClass('active');
+        
+        // Load tab content
+        const tab = $(this).data('tab');
+        const url = $(this).data('url');
+        loadTab(tab, url);
+    });
+    
+    function loadTab(tab, url) {
+        console.log('Loading tab:', tab, 'from URL:', url);
+        
+        if (!url) {
+            console.error('No URL provided for tab:', tab);
+            return;
+        }
+        
+        $('#likes-tab-content').html(`
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        `);
+        
+        $.ajax({
+            url: url,
+            type: 'GET',
+            success: function(data) {
+                console.log('AJAX success, data length:', data.length);
+                $('#likes-tab-content').html(data);
+                initializeTabButtons();
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX error:', status, error);
+                console.error('Response:', xhr.responseText);
+                $('#likes-tab-content').html(`
+                    <div class="text-center py-5">
+                        <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                        <h4>Error Loading Content</h4>
+                        <p class="text-muted">${xhr.status} ${xhr.statusText}</p>
+                    </div>
+                `);
+            }
+        });
+    }
+    
+    function initializeTabButtons() {
+        // Unlike button handler
+        $('.unlike-btn').off('click').on('click', function() {
+            const userId = $(this).data('user-id');
+            const username = $(this).data('username');
+            
+            if (confirm(`Unlike ${username}?`)) {
+                $.ajax({
+                    url: `/friends/unlike/${userId}/`,
+                    type: 'POST',
+                    headers: {'X-CSRFToken': getCookie('csrftoken')},
+                    success: function(response) {
+                        if (response.success) {
+                            $(`.like-item[data-user-id="${userId}"]`).fadeOut(300, function() {
+                                $(this).remove();
+                                updateTabCounts();
+                            });
+                        } else {
+                            alert(response.message || 'Error unliking user');
+                        }
+                    },
+                    error: function() {
+                        alert('Error unliking user');
+                    }
+                });
+            }
+        });
+        
+        // Like back button handler
+        $('.like-back-btn').off('click').on('click', function() {
+            const userId = $(this).data('user-id');
+            const username = $(this).data('username');
+            
+            if (confirm(`Like back ${username}?`)) {
+                $.ajax({
+                    url: `/friends/like/${userId}/`,
+                    type: 'POST',
+                    headers: {'X-CSRFToken': getCookie('csrftoken')},
+                    success: function(response) {
+                        if (response.success) {
+                            $(`.like-item[data-user-id="${userId}"]`).fadeOut(300, function() {
+                                $(this).remove();
+                                updateTabCounts();
+                            });
+                            showNotification(response.message, 'success');
+                        } else {
+                            alert(response.message || 'Error liking user');
+                        }
+                    },
+                    error: function() {
+                        alert('Error liking user');
+                    }
+                });
+            }
+        });
+    }
+    
+    function updateTabCounts() {
+        // Refresh counts by reloading the current tab
+        const activeTab = $('.nav-tabs .nav-link.active').data('tab');
+        const url = $(`.nav-tabs .nav-link[data-tab="${activeTab}"]`).data('url');
+        loadTab(activeTab, url);
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    function showNotification(message, type) {
+        const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+        const notification = $(`
+            <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `);
+        
+        $('.card-body').prepend(notification);
+        
+        setTimeout(() => {
+            notification.alert('close');
+        }, 5000);
+    }
+    
+    initializeTabButtons();
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-nav {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        height: fit-content;
+    }
+    
+    .dashboard-nav-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 15px;
+        margin-bottom: 5px;
+        border-radius: 5px;
+        color: #495057;
+        text-decoration: none;
+        transition: all 0.2s;
+        position: relative;
+    }
+    
+    .dashboard-nav-item:hover {
+        background: #e9ecef;
+        color: #212529;
+        text-decoration: none;
+    }
+    
+    .dashboard-nav-item.active {
+        background: #0d6efd;
+        color: white;
+    }
+    
+    .dashboard-nav-icon {
+        width: 20px;
+        margin-right: 10px;
+        text-align: center;
+    }
+    
+    .nav-tabs .nav-link {
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: #6c757d;
+        font-weight: 500;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #0d6efd;
+        border-bottom-color: #0d6efd;
+        background: transparent;
+    }
+    
+    .like-item {
+        transition: background-color 0.2s;
+    }
+    
+    .like-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .profile-pic-small {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+    }
+    
+    .progress-container {
+        background: #e9ecef;
+        border-radius: 10px;
+        padding: 15px;
+    }
+    
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+    
+    .progress-bar {
+        height: 8px;
+        background: #dee2e6;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: #0d6efd;
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+</style>
+{% endblock %}

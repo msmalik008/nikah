@@ -6,6 +6,49 @@
 
 {% block extra_css %}
 <style>
+/* Friend Card Styles */
+.friend-card {
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: var(--card-bg);
+}
+
+.friend-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    border-color: var(--primary-color);
+}
+
+/* Online Status Badge */
+.badge.bg-success i,
+.badge.bg-secondary i {
+    font-size: 8px;
+    vertical-align: middle;
+}
+
+/* Empty State */
+.text-center i {
+    opacity: 0.5;
+}
+
+/* Pagination */
+.pagination .page-link {
+    background: var(--card-bg);
+    border-color: rgba(255,255,255,0.1);
+    color: var(--text-color);
+}
+
+.pagination .page-link:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.pagination .active .page-link {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
 /* Dashboard Specific Styles */
 .dashboard-container {
     min-height: calc(100vh - 140px);
@@ -432,11 +475,6 @@
                             Timeline
                         </a>
                         
-                        <a href="{% url 'accounts:people_nearby' %}" class="dashboard-nav-item">
-                            <i class="fas fa-search dashboard-nav-icon"></i>
-                            Discover
-                        </a>
-                        
                         <a href="{% url 'chat:chat' %}" class="dashboard-nav-item">
                             <i class="fas fa-envelope dashboard-nav-icon"></i>
                             Messages
@@ -445,20 +483,48 @@
                             {% endif %}
                         </a>
                         
-                        <a href="{% url 'useractivity:activity_stream' %}" class="dashboard-nav-item">
-                            <i class="fas fa-bell dashboard-nav-icon"></i>
-                            Activity
+                        <a href="{% url 'friendship:friends' %}" class="dashboard-nav-item">
+                            <i class="fas fa-solid fa-user-group dashboard-nav-icon"></i>
+                            Friends
                             {% if unread_activities_count %}
                             <span class="notification-badge">{{ unread_activities_count }}</span>
                             {% endif %}
                         </a>
                         
-                        <div class="my-3" style="border-top: 1px solid rgba(255,255,255,0.1);"></div>
-                        
-                        <a href="{% url 'accounts:profile_view' %}" class="dashboard-nav-item">
-                            <i class="fas fa-user dashboard-nav-icon"></i>
-                            My Profile
+                        <a href="{% url 'friendship:sent_requests' %}" class="dashboard-nav-item">
+                            <i class="fas fa-paper-plane dashboard-nav-icon"></i>
+                            Sent Requests
+                            {% if pending_sent > 0 %}
+                                <span class="badge bg-danger ms-1">{{ pending_sent }}</span>
+                            {% endif %}
                         </a>
+
+                        <a href="{% url 'friendship:received_requests' %}" class="dashboard-nav-item">
+                            <i class="fas fa-user-check dashboard-nav-icon"></i>
+                            Received Requests
+                            {% if unread_activities_count %}
+                            <span class="notification-badge">{{ unread_activities_count }}</span>
+                            {% endif %}
+                        </a>
+
+                        <a href="{% url 'friendship:blocked_users' %}" class="dashboard-nav-item">
+                            <i class="fas fa-user-check dashboard-nav-icon"></i>
+                            Blocked Users
+                            {% if unread_activities_count %}
+                            <span class="notification-badge">{{ unread_activities_count }}</span>
+                            {% endif %}
+                        </a>
+
+                        <a class="nav-link" href="{% url 'friendship:get_likes' %}">
+                            <i class="fas fa-heart"></i> Likes
+                            {% with total_likes=mutual_likes_count|add:sent_likes_count|add:received_likes_count %}
+                                {% if total_likes > 0 %}
+                                    <span class="badge bg-danger ms-1">{{ total_likes }}</span>
+                                {% endif %}
+                            {% endwith %}
+                        </a>
+                        
+                        <div class="my-3" style="border-top: 1px solid rgba(255,255,255,0.1);"></div>
                         
                         <a href="{% url 'accounts:account_settings' %}" class="dashboard-nav-item">
                             <i class="fas fa-cog dashboard-nav-icon"></i>
@@ -468,16 +534,6 @@
                         <a href="{% url 'accounts:activity_history' %}" class="dashboard-nav-item">
                             <i class="fas fa-history dashboard-nav-icon"></i>
                             Activity History
-                        </a>
-                        
-                        <div class="my-3" style="border-top: 1px solid rgba(255,255,255,0.1);"></div>
-                        
-                        <a href="{% url 'friendship:get_likes' %}" class="dashboard-nav-item">
-                            <i class="fas fa-heart dashboard-nav-icon"></i>
-                            Likes
-                            {% if new_likes_count %}
-                            <span class="notification-badge">{{ new_likes_count }}</span>
-                            {% endif %}
                         </a>
                         
                         <a href="{% url 'accounts:download_app' %}" class="dashboard-nav-item">
@@ -508,6 +564,8 @@
 </div>
 {% endblock %}
 
+<!-- jQuery (required for your AJAX code) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 {% block extra_js %}
 <script>
 // Dashboard specific JavaScript

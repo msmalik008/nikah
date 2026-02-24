@@ -1,0 +1,729 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar -->
+    <div class="col-lg-3 col-xl-2">
+        <div class="dashboard-nav">
+            <h4 class="mb-4">Friends</h4>
+            
+            <div class="nav flex-column">
+                <a href="{% url 'friendship:friends' %}" class="dashboard-nav-item {% if active_tab == 'friends' %}active{% endif %}">
+                    <i class="fas fa-users dashboard-nav-icon"></i>
+                    Friends
+                    {% if total_friends > 0 %}
+                        <span class="badge bg-light text-dark ms-1">{{ total_friends }}</span>
+                    {% endif %}
+                </a>
+                
+                <a href="{% url 'friendship:sent_requests' %}" class="dashboard-nav-item {% if active_tab == 'sent' %}active{% endif %}">
+                    <i class="fas fa-paper-plane dashboard-nav-icon"></i>
+                    Sent Requests
+                    {% if pending_sent > 0 %}
+                        <span class="badge bg-danger ms-1">{{ pending_sent }}</span>
+                    {% endif %}
+                </a>
+
+                <a href="{% url 'friendship:received_requests' %}" class="dashboard-nav-item {% if active_tab == 'received' %}active{% endif %}">
+                    <i class="fas fa-inbox dashboard-nav-icon"></i>
+                    Received Requests
+                    {% if pending_received > 0 %}
+                        <span class="badge bg-warning ms-1">{{ pending_received }}</span>
+                    {% endif %}
+                </a>
+
+                <a href="{% url 'friendship:blocked_users' %}" class="dashboard-nav-item {% if active_tab == 'blocked' %}active{% endif %}">
+                    <i class="fas fa-ban dashboard-nav-icon"></i>
+                    Blocked Users
+                </a>
+
+                <a href="{% url 'friendship:restricted_users' %}" class="dashboard-nav-item {% if active_tab == 'restricted' %}active{% endif %}">
+                    <i class="fas fa-eye-slash dashboard-nav-icon"></i>
+                    Restricted Users
+                </a>
+
+                <div class="my-3" style="border-top: 1px solid rgba(255,255,255,0.1);"></div>
+                
+                <a href="{% url 'accounts:account_settings' %}" class="dashboard-nav-item">
+                    <i class="fas fa-cog dashboard-nav-icon"></i>
+                    Settings
+                </a>
+            </div>
+            
+            <!-- Profile Completion -->
+            <div class="progress-container mt-4">
+                <div class="progress-header">
+                    <span>Profile Strength</span>
+                    <span>{{ profile_completion }}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ profile_completion }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="col-lg-9 col-xl-10">
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs">
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_tab == 'friends' %}active{% endif %}" 
+                           href="{% url 'friendship:friends' %}">
+                            Friends
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_tab == 'sent' %}active{% endif %}" 
+                           href="{% url 'friendship:sent_requests' %}">
+                            Sent Requests
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_tab == 'received' %}active{% endif %}" 
+                           href="{% url 'friendship:received_requests' %}">
+                            Received Requests
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_tab == 'blocked' %}active{% endif %}" 
+                           href="{% url 'friendship:blocked_users' %}">
+                            Blocked Users
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_tab == 'restricted' %}active{% endif %}" 
+                           href="{% url 'friendship:restricted_users' %}">
+                            Restricted Users
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                {% if active_tab == 'friends' %}
+                    <!-- Friends Tab -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3>{{ total_friends }}</h3>
+                                    <p class="mb-0">Total Friends</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3>{{ online_friends }}</h3>
+                                    <p class="mb-0">Online Now</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3>{{ pending_received }}</h3>
+                                    <p class="mb-0">Incoming Requests</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if items %}
+                        <div class="list-group">
+                            {% for friend in items %}
+                                <div class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            {% with user_profile=friend.userprofile %}
+                                                {% if user_profile.profile_pic %}
+                                                    <img src="{{ user_profile.profile_pic.url }}" 
+                                                         alt="{{ friend.username }}" 
+                                                         class="rounded-circle me-3" 
+                                                         style="width: 50px; height: 50px; object-fit: cover;">
+                                                {% else %}
+                                                    <img src="{% static 'default_profile.jpg' %}" 
+                                                         alt="Default" 
+                                                         class="rounded-circle me-3" 
+                                                         style="width: 50px; height: 50px; object-fit: cover;">
+                                                {% endif %}
+                                            {% endwith %}
+                                            <div>
+                                                <h6 class="mb-1">
+                                                    <a href="{% url 'accounts:view_profile' friend.id %}" 
+                                                       class="text-decoration-none fw-bold">
+                                                        {{ friend.username }}
+                                                    </a>
+                                                </h6>
+                                                <small class="text-muted">
+                                                    {% if friend.is_online %}
+                                                        <span class="text-success">● Online</span>
+                                                    {% else %}
+                                                        Last active: {{ friend.last_active|naturaltime }}
+                                                    {% endif %}
+                                                </small>
+                                                {% if friend.city and friend.country and friend.userprofile.show_location %}
+                                                    <br><small class="text-muted">
+                                                        <i class="fas fa-map-marker-alt"></i> 
+                                                        {{ friend.city }}, {{ friend.country }}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-info rounded-pill">
+                                                {{ friend.mutual_friends_count|default:0 }} mutual
+                                            </span>
+                                            <div class="btn-group">
+                                                <a href="{% url 'accounts:view_profile' friend.id %}" 
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-danger"
+                                                        onclick="unfriendUser({{ friend.id }}, '{{ friend.username|escapejs }}')">
+                                                    <i class="fas fa-user-minus"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if is_paginated %}
+                            {% include 'includes/pagination.html' with page_obj=page_obj %}
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <h4>No Friends Yet</h4>
+                            <p class="text-muted">You don't have any friends yet.</p>
+                            <a href="{% url 'accounts:find_friends' %}" class="btn btn-primary">
+                                <i class="fas fa-user-plus"></i> Find Friends
+                            </a>
+                        </div>
+                    {% endif %}
+                
+                {% elif active_tab == 'sent' %}
+                    <!-- Sent Requests Tab -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3>{{ total_sent_requests|default:0 }}</h3>
+                                    <p class="mb-0">Sent Requests</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3>{{ pending_received|default:0 }}</h3>
+                                    <p class="mb-0">Incoming Requests</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3>{{ total_friends|default:0 }}</h3>
+                                    <p class="mb-0">Total Friends</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if items %}
+                        <div class="list-group">
+                        {% for request in items %}
+                            <div class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        {% if request.user_a == user %}
+                                            {% with receiver=request.user_b %}
+                                                {% with user_profile=receiver.userprofile %}
+                                                    {% if user_profile.profile_pic %}
+                                                        <img src="{{ user_profile.profile_pic.url }}" 
+                                                            alt="{{ receiver.username }}" 
+                                                            class="rounded-circle me-3" 
+                                                            style="width: 50px; height: 50px; object-fit: cover;">
+                                                    {% else %}
+                                                        <img src="{% static 'default_profile.jpg' %}" 
+                                                            alt="Default" 
+                                                            class="rounded-circle me-3" 
+                                                            style="width: 50px; height: 50px; object-fit: cover;">
+                                                    {% endif %}
+                                                {% endwith %}
+                                                <div>
+                                                    <h6 class="mb-1">
+                                                        <a href="{% url 'accounts:view_profile' receiver.id %}" 
+                                                        class="text-decoration-none fw-bold">
+                                                            {{ receiver.username }}
+                                                        </a>
+                                                    </h6>
+                                                    <small class="text-muted">
+                                                        Sent: {{ request.created_at|date:"M d, Y" }}
+                                                    </small>
+                                                    {% with user_profile=receiver.userprofile %}
+                                                        {% if user_profile.city and user_profile.country and user_profile.show_location %}
+                                                            <br><small class="text-muted">
+                                                                <i class="fas fa-map-marker-alt"></i> 
+                                                                {{ user_profile.city }}, {{ user_profile.country }}
+                                                            </small>
+                                                        {% endif %}
+                                                    {% endwith %}
+                                                </div>
+                                            {% endwith %}
+                                        {% else %}
+                                            {% with receiver=request.user_a %}
+                                                {% with user_profile=receiver.userprofile %}
+                                                    {% if user_profile.profile_pic %}
+                                                        <img src="{{ user_profile.profile_pic.url }}" 
+                                                            alt="{{ receiver.username }}" 
+                                                            class="rounded-circle me-3" 
+                                                            style="width: 50px; height: 50px; object-fit: cover;">
+                                                    {% else %}
+                                                        <img src="{% static 'default_profile.jpg' %}" 
+                                                            alt="Default" 
+                                                            class="rounded-circle me-3" 
+                                                            style="width: 50px; height: 50px; object-fit: cover;">
+                                                    {% endif %}
+                                                {% endwith %}
+                                                <div>
+                                                    <h6 class="mb-1">
+                                                        <a href="{% url 'accounts:view_profile' receiver.id %}" 
+                                                        class="text-decoration-none fw-bold">
+                                                            {{ receiver.username }}
+                                                        </a>
+                                                    </h6>
+                                                    <small class="text-muted">
+                                                        Sent: {{ request.created_at|date:"M d, Y" }}
+                                                    </small>
+                                                    {% with user_profile=receiver.userprofile %}
+                                                        {% if user_profile.city and user_profile.country and user_profile.show_location %}
+                                                            <br><small class="text-muted">
+                                                                <i class="fas fa-map-marker-alt"></i> 
+                                                                {{ user_profile.city }}, {{ user_profile.country }}
+                                                            </small>
+                                                        {% endif %}
+                                                    {% endwith %}
+                                                </div>
+                                            {% endwith %}
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-warning rounded-pill">Pending</span>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-danger ms-2"
+                                                onclick="cancelRequest({{ request.id }}, '{{ receiver.username|escapejs }}')">
+                                            <i class="fas fa-times"></i> Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        </div>
+                        
+                        {% if is_paginated %}
+                            {% include 'includes/pagination.html' with page_obj=page_obj %}
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-paper-plane fa-3x text-muted mb-3"></i>
+                            <h4>No Sent Requests</h4>
+                            <p class="text-muted">You haven't sent any friend requests yet.</p>
+                        </div>
+                    {% endif %}
+                
+                {% elif active_tab == 'received' %}
+                    <!-- Received Requests Tab -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3>{{ total_received_requests|default:0 }}</h3>
+                                    <p class="mb-0">Received Requests</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3>{{ pending_sent|default:0 }}</h3>
+                                    <p class="mb-0">Sent Requests</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3>{{ total_friends|default:0 }}</h3>
+                                    <p class="mb-0">Total Friends</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if items %}
+                        <div class="list-group">
+                        {% for request in items %}
+                            <div class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        {% if request.user_b == user %}
+                                            {% with sender=request.user_a %}
+                                                {% with user_profile=sender.userprofile %}
+                                                    {% if user_profile.profile_pic %}
+                                                        <img src="{{ user_profile.profile_pic.url }}" 
+                                                            alt="{{ sender.username }}" 
+                                                            class="rounded-circle me-3" 
+                                                            style="width: 50px; height: 50px; object-fit: cover;">
+                                                    {% else %}
+                                                        <img src="{% static 'default_profile.jpg' %}" 
+                                                            alt="Default" 
+                                                            class="rounded-circle me-3" 
+                                                            style="width: 50px; height: 50px; object-fit: cover;">
+                                                    {% endif %}
+                                                {% endwith %}
+                                                <div>
+                                                    <h6 class="mb-1">
+                                                        <a href="{% url 'accounts:view_profile' sender.id %}" 
+                                                        class="text-decoration-none fw-bold">
+                                                            {{ sender.username }}
+                                                        </a>
+                                                    </h6>
+                                                    <small class="text-muted">
+                                                        Sent: {{ request.created_at|date:"M d, Y" }}
+                                                    </small>
+                                                    {% with user_profile=sender.userprofile %}
+                                                        {% if user_profile.city and user_profile.country and user_profile.show_location %}
+                                                            <br><small class="text-muted">
+                                                                <i class="fas fa-map-marker-alt"></i> 
+                                                                {{ user_profile.city }}, {{ user_profile.country }}
+                                                            </small>
+                                                        {% endif %}
+                                                    {% endwith %}
+                                                </div>
+                                            {% endwith %}
+                                        {% else %}
+                                            {% with sender=request.user_b %}
+                                                {% with user_profile=sender.userprofile %}
+                                                    {% if user_profile.profile_pic %}
+                                                        <img src="{{ user_profile.profile_pic.url }}" 
+                                                            alt="{{ sender.username }}" 
+                                                            class="rounded-circle me-3" 
+                                                            style="width: 50px; height: 50px; object-fit: cover;">
+                                                    {% else %}
+                                                        <img src="{% static 'default_profile.jpg' %}" 
+                                                            alt="Default" 
+                                                            class="rounded-circle me-3" 
+                                                            style="width: 50px; height: 50px; object-fit: cover;">
+                                                    {% endif %}
+                                                {% endwith %}
+                                                <div>
+                                                    <h6 class="mb-1">
+                                                        <a href="{% url 'accounts:view_profile' sender.id %}" 
+                                                        class="text-decoration-none fw-bold">
+                                                            {{ sender.username }}
+                                                        </a>
+                                                    </h6>
+                                                    <small class="text-muted">
+                                                        Sent: {{ request.created_at|date:"M d, Y" }}
+                                                    </small>
+                                                    {% with user_profile=sender.userprofile %}
+                                                        {% if user_profile.city and user_profile.country and user_profile.show_location %}
+                                                            <br><small class="text-muted">
+                                                                <i class="fas fa-map-marker-alt"></i> 
+                                                                {{ user_profile.city }}, {{ user_profile.country }}
+                                                            </small>
+                                                        {% endif %}
+                                                    {% endwith %}
+                                                </div>
+                                            {% endwith %}
+                                        {% endif %}
+                                    </div>
+                                    <div class="btn-group">
+                                        <button type="button" 
+                                                class="btn btn-sm btn-success"
+                                                onclick="acceptRequest({{ request.id }}, '{{ sender.username|escapejs }}')">
+                                            <i class="fas fa-check"></i> Accept
+                                        </button>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-danger"
+                                                onclick="rejectRequest({{ request.id }}, '{{ sender.username|escapejs }}')">
+                                            <i class="fas fa-times"></i> Reject
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        </div>
+                        
+                        {% if is_paginated %}
+                            {% include 'includes/pagination.html' with page_obj=page_obj %}
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h4>No Incoming Requests</h4>
+                            <p class="text-muted">You don't have any pending friend requests.</p>
+                        </div>
+                    {% endif %}
+                
+                {% elif active_tab == 'blocked' %}
+                    <!-- Blocked Users Tab -->
+                    {% if items %}
+                        <div class="list-group">
+                            {% for blocked in items %}
+                                <div class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            {% with user_profile=blocked.user.userprofile %}
+                                                {% if user_profile.profile_pic %}
+                                                    <img src="{{ user_profile.profile_pic.url }}" 
+                                                         alt="{{ blocked.user.username }}" 
+                                                         class="rounded-circle me-3" 
+                                                         style="width: 50px; height: 50px; object-fit: cover;">
+                                                {% else %}
+                                                    <img src="{% static 'default_profile.jpg' %}" 
+                                                         alt="Default" 
+                                                         class="rounded-circle me-3" 
+                                                         style="width: 50px; height: 50px; object-fit: cover;">
+                                                {% endif %}
+                                            {% endwith %}
+                                            <div>
+                                                <h6 class="mb-1">
+                                                    <a href="{% url 'accounts:view_profile' blocked.user.id %}" 
+                                                       class="text-decoration-none fw-bold">
+                                                        {{ blocked.user.username }}
+                                                    </a>
+                                                </h6>
+                                                <small class="text-muted">
+                                                    Blocked {{ blocked.date|date:"M d, Y" }}
+                                                    {% if blocked.blocked_by == 'you' %}
+                                                        (by you)
+                                                    {% else %}
+                                                        (by them)
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-primary"
+                                                onclick="unblockUser({{ blocked.user.id }}, '{{ blocked.user.username|escapejs }}')">
+                                            <i class="fas fa-unlock"></i> Unblock
+                                        </button>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if is_paginated %}
+                            {% include 'includes/pagination.html' with page_obj=page_obj %}
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-ban fa-3x text-muted mb-3"></i>
+                            <h4>No Blocked Users</h4>
+                            <p class="text-muted">You haven't blocked any users.</p>
+                        </div>
+                    {% endif %}
+                
+                {% elif active_tab == 'restricted' %}
+                    <!-- Restricted Users Tab -->
+                    {% if items %}
+                        <div class="list-group">
+                            {% for restricted in items %}
+                                <div class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            {% with user_profile=restricted.user.userprofile %}
+                                                {% if user_profile.profile_pic %}
+                                                    <img src="{{ user_profile.profile_pic.url }}" 
+                                                         alt="{{ restricted.user.username }}" 
+                                                         class="rounded-circle me-3" 
+                                                         style="width: 50px; height: 50px; object-fit: cover;">
+                                                {% else %}
+                                                    <img src="{% static 'default_profile.jpg' %}" 
+                                                         alt="Default" 
+                                                         class="rounded-circle me-3" 
+                                                         style="width: 50px; height: 50px; object-fit: cover;">
+                                                {% endif %}
+                                            {% endwith %}
+                                            <div>
+                                                <h6 class="mb-1">
+                                                    <a href="{% url 'accounts:view_profile' restricted.user.id %}" 
+                                                       class="text-decoration-none fw-bold">
+                                                        {{ restricted.user.username }}
+                                                    </a>
+                                                </h6>
+                                                <small class="text-muted">
+                                                    Restricted {{ restricted.date|date:"M d, Y" }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-primary"
+                                                onclick="unrestrictUser({{ restricted.user.id }}, '{{ restricted.user.username|escapejs }}')">
+                                            <i class="fas fa-eye"></i> Unrestrict
+                                        </button>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if is_paginated %}
+                            {% include 'includes/pagination.html' with page_obj=page_obj %}
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-eye-slash fa-3x text-muted mb-3"></i>
+                            <h4>No Restricted Users</h4>
+                            <p class="text-muted">You haven't restricted any users.</p>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// JavaScript functions for actions
+function unfriendUser(userId, username) {
+    if (confirm(`Are you sure you want to unfriend ${username}?`)) {
+        window.location.href = `/friends/unfriend/${userId}/`;
+    }
+}
+
+function acceptRequest(requestId, username) {
+    if (confirm(`Accept friend request from ${username}?`)) {
+        window.location.href = `/friends/accept/${requestId}/`;
+    }
+}
+
+function rejectRequest(requestId, username) {
+    if (confirm(`Reject friend request from ${username}?`)) {
+        window.location.href = `/friends/reject/${requestId}/`;
+    }
+}
+
+function cancelRequest(requestId, username) {
+    if (confirm(`Cancel friend request to ${username}?`)) {
+        window.location.href = `/friends/cancel/${requestId}/`; // You'll need to create this endpoint
+    }
+}
+
+function unblockUser(userId, username) {
+    if (confirm(`Unblock ${username}?`)) {
+        window.location.href = `/friends/unblock/${userId}/`;
+    }
+}
+
+function unrestrictUser(userId, username) {
+    if (confirm(`Unrestrict ${username}?`)) {
+        window.location.href = `/friends/unrestrict/${userId}/`;
+    }
+}
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-nav {
+        background: #000000;
+        border-radius: 10px;
+        padding: 20px;
+        height: fit-content;
+    }
+    
+    .dashboard-nav-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 15px;
+        margin-bottom: 5px;
+        border-radius: 5px;
+        color: #495057;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    
+    .dashboard-nav-item:hover {
+        background: #e9ecef;
+        color: #212529;
+        text-decoration: none;
+    }
+    
+    .dashboard-nav-item.active {
+        background: #0d6efd;
+        color: white;
+    }
+    
+    .dashboard-nav-icon {
+        width: 20px;
+        margin-right: 10px;
+        text-align: center;
+    }
+    
+    .notification-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: #dc3545;
+        color: white;
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        font-size: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .nav-tabs .nav-link {
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: #6c757d;
+        font-weight: 500;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #0d6efd;
+        border-bottom-color: #0d6efd;
+        background: transparent;
+    }
+    
+    .progress-container {
+        background: #e9ecef;
+        border-radius: 10px;
+        padding: 15px;
+    }
+    
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+    
+    .progress-bar {
+        height: 8px;
+        background: #dee2e6;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: #0d6efd;
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+</style>
+{% endblock %}

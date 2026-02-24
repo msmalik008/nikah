@@ -34,6 +34,13 @@ class UserProfile(models.Model):
         ('E', 'Expert'),
     ]
     
+    SECT_CHOICES = [
+        ('sunni_barelvi', 'Sunni / Barelvi'),
+        ('deobandi', 'Deobandi'),
+        ('ehl_e_hadith', 'Ehl-e-Hadith / Wahabi'),
+        ('shia', 'Shia'),
+        ('other', 'Other'),
+    ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='userprofile')
     age = models.PositiveIntegerField(null=True, blank=True, db_index=True)
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, blank=True, db_index=True)
@@ -41,7 +48,7 @@ class UserProfile(models.Model):
     profile_pic = models.ImageField(upload_to='profile_pics/%Y/%m/', null=True, blank=True)
     city = models.CharField(max_length=100, blank=True, db_index=True)
     country = models.CharField(max_length=100, blank=True, db_index=True)
-    sect = models.CharField(max_length=100, blank=True, help_text="Religious or philosophical sect")
+    sect = models.CharField(max_length=50, choices=SECT_CHOICES, blank=True, help_text="Islamic sect")
     education = models.CharField(max_length=10, choices=EDUCATION_CHOICES, blank=True)
     practice_level = models.CharField(max_length=1, choices=PRACTICE_LEVEL_CHOICES, blank=True)
     
@@ -188,7 +195,10 @@ class UserProfile(models.Model):
         self.save(update_fields=['preferences'])
     
     def calculate_compatibility(self, other_profile):
-        """Calculate compatibility score with another profile"""
+        """
+        Calculate compatibility score with another profile
+        Updated for Muslim-focused app in Pakistan
+        """
         cache_key = f"compatibility_{self.user_id}_{other_profile.user_id}"
         cached = cache.get(cache_key)
         
@@ -198,92 +208,56 @@ class UserProfile(models.Model):
         score = 0
         total_weight = 0
         
-        # Get preferences for looking_for
-        looking_for = self.get_preference('looking_for', '')
+        # ==========================================
+        # 1. GENDER (Always opposite) - 0 points but required
+        # ==========================================
+        # Always show opposite gender
+        if self.gender == other_profile.gender:
+            # Same gender - not a match at all
+            result = 0
+            cache.set(cache_key, result, 300)
+            return result
         
-        # Check gender preference compatibility (weight: 25%)
-        if looking_for and other_profile.gender:
-            if looking_for == 'B' or looking_for == other_profile.gender:
-                score += 25
-            else:
-                # If gender preference doesn't match, low compatibility
-                result = 20
-                cache.set(cache_key, result, 300)  # Cache for 5 minutes
-                return result
-        total_weight += 25
+        # No points for gender, just a requirement
         
-        # Age compatibility (weight: 20%)
+        # ==========================================
+        # 2. SECT COMPATIBILITY (30% weight) - Most important
+        # ==========================================
+        if self.sect and other_profile.sect:
+            sect_score = self._are_sects_similar(self.sect, other_profile.sect)
+            score += sect_score * 30  # 30% weight
+            total_weight += 30
+        
+        # ==========================================
+        # 3. LOCATION COMPATIBILITY (25% weight)
+        # ==========================================
+        if self.city and other_profile.city and self.country and other_profile.country:
+            location_score = self._calculate_location_compatibility(other_profile)
+            score += location_score * 25  # 25% weight
+            total_weight += 25
+        
+        # ==========================================
+        # 4. AGE COMPATIBILITY (20% weight)
+        # ==========================================
         if self.age and other_profile.age:
-            age_diff = abs(self.age - other_profile.age)
-            if age_diff <= 5:
-                score += 20
-            elif age_diff <= 10:
-                score += 15
-            elif age_diff <= 15:
-                score += 10
-            else:
-                score += 5
+            age_score = self._calculate_age_compatibility(other_profile.age)
+            score += age_score * 20  # 20% weight
             total_weight += 20
         
-        # Education compatibility (weight: 15%)
-        if self.education and other_profile.education:
-            if self.education == other_profile.education:
-                score += 15
-            else:
-                # Add partial score based on education level
-                education_weights = {'HS': 1, 'AD': 2, 'BD': 3, 'MD': 4, 'PHD': 5, 'OT': 3}
-                self_weight = education_weights.get(self.education, 3)
-                other_weight = education_weights.get(other_profile.education, 3)
-                
-                diff = abs(self_weight - other_weight)
-                if diff == 0:
-                    score += 15
-                elif diff == 1:
-                    score += 12
-                elif diff == 2:
-                    score += 8
-                else:
-                    score += 3
-            total_weight += 15
-        
-        # Practice level compatibility (weight: 15%)
+        # ==========================================
+        # 5. PRACTICE LEVEL (15% weight)
+        # ==========================================
         if self.practice_level and other_profile.practice_level:
-            if self.practice_level == other_profile.practice_level:
-                score += 15
-            else:
-                level_values = {'B': 1, 'I': 2, 'A': 3, 'E': 4}
-                try:
-                    diff = abs(level_values[self.practice_level] - level_values[other_profile.practice_level])
-                    if diff <= 1:
-                        score += 12
-                    elif diff <= 2:
-                        score += 8
-                    else:
-                        score += 3
-                except KeyError:
-                    score += 5
+            practice_score = self._calculate_practice_compatibility(other_profile.practice_level)
+            score += practice_score * 15  # 15% weight
             total_weight += 15
         
-        # Sect compatibility (weight: 15%)
-        if self.sect and other_profile.sect:
-            if self.sect.lower() == other_profile.sect.lower():
-                score += 15
-            else:
-                # Check if sects are similar
-                if self._are_sects_similar(self.sect, other_profile.sect):
-                    score += 12
-                else:
-                    score += 3
-            total_weight += 15
-        
-        # Location compatibility (weight: 10%)
-        if self.city and other_profile.city and self.country and other_profile.country:
-            if self.city.lower() == other_profile.city.lower() and self.country.lower() == other_profile.country.lower():
-                score += 10
-            elif self.country.lower() == other_profile.country.lower():
-                score += 8
-            else:
-                score += 3
+        # ==========================================
+        # 6. EDUCATION (10% weight)
+        # ==========================================
+        if self.education and other_profile.education:
+            education_score = self._calculate_education_compatibility(other_profile.education)
+            score += education_score * 10  # 10% weight
             total_weight += 10
         
         # Calculate final score
@@ -300,25 +274,188 @@ class UserProfile(models.Model):
         return final_score
     
     def _are_sects_similar(self, sect1, sect2):
-        """Check if two sects are similar"""
-        similar_sects_map = {
-            'sunni': ['sunni', 'hanafi', 'maliki', 'shafi', 'hanbali'],
-            'shia': ['shia', 'jafari', 'ismaili', 'zaidi'],
-            'sufi': ['sufi', 'naqshbandi', 'qadiri', 'chishti'],
-            'christian': ['christian', 'catholic', 'protestant', 'orthodox'],
-            'hindu': ['hindu', 'vaishnavism', 'shaivism', 'shaktism', 'smartism'],
-            'buddhist': ['buddhist', 'theravada', 'mahayana', 'vajrayana'],
-            'jewish': ['jewish', 'orthodox', 'conservative', 'reform'],
+        """
+        Calculate compatibility between Islamic sects
+        Returns score between 0 and 1
+        """
+        sect1_lower = sect1.lower().strip()
+        sect2_lower = sect2.lower().strip()
+        
+        # Define sect groups with similarity levels
+        SECT_GROUPS = {
+            'sunni': {
+                'keywords': ['sunni', 'ahle sunnat', 'barelvi', 'hanafi'],
+                'compatible': ['deobandi'],  # Sunni groups are compatible
+                'incompatible': ['shia', 'ehl-e-hadith', 'wahabi']
+            },
+            'barelvi': {
+                'keywords': ['barelvi', 'ahle sunnat', 'sunni'],
+                'compatible': ['deobandi', 'sunni'],
+                'incompatible': ['shia', 'ehl-e-hadith', 'wahabi']
+            },
+            'deobandi': {
+                'keywords': ['deobandi', 'hanafi'],
+                'compatible': ['barelvi', 'sunni'],
+                'incompatible': ['shia', 'ehl-e-hadith', 'wahabi']
+            },
+            'ehl-e-hadith': {
+                'keywords': ['ehl-e-hadith', 'ahl e hadith', 'wahabi', 'salafi'],
+                'compatible': [],  # Usually only compatible with themselves
+                'incompatible': ['shia', 'barelvi', 'deobandi']
+            },
+            'shia': {
+                'keywords': ['shia', 'ithna ashari', 'jafari'],
+                'compatible': [],  # Usually only compatible with themselves
+                'incompatible': ['sunni', 'barelvi', 'deobandi', 'ehl-e-hadith', 'wahabi']
+            }
         }
         
-        sect1_lower = sect1.lower()
-        sect2_lower = sect2.lower()
+        # Check if exact match
+        if sect1_lower == sect2_lower:
+            return 1.0
         
-        for group, sects in similar_sects_map.items():
-            if sect1_lower in sects and sect2_lower in sects:
-                return True
+        # Check if in same group
+        for group, data in SECT_GROUPS.items():
+            sect1_in_group = any(keyword in sect1_lower for keyword in data['keywords'])
+            sect2_in_group = any(keyword in sect2_lower for keyword in data['keywords'])
+            
+            if sect1_in_group and sect2_in_group:
+                # Both in same group - good compatibility
+                return 0.9
+            
+            # Check compatibility between groups
+            if sect1_in_group:
+                for compatible in data['compatible']:
+                    if compatible in sect2_lower:
+                        return 0.8
+                
+                for incompatible in data['incompatible']:
+                    if incompatible in sect2_lower:
+                        return 0.2
         
-        return False
+        # Different sects with no special relationship
+        return 0.3
+    
+    def _calculate_location_compatibility(self, other_profile):
+        """
+        Calculate location compatibility - city focused, country less important
+        Returns score between 0 and 1
+        """
+        # If location is hidden, give neutral score
+        if not self.show_location or not other_profile.show_location:
+            return 0.5
+        
+        # Same city - highest score
+        if (self.city and other_profile.city and 
+            self.city.lower() == other_profile.city.lower()):
+            return 1.0
+        
+        # Different city but same province (if you have province field)
+        # For now, check if cities are in same region
+        if (self.city and other_profile.city):
+            # You could add a list of major cities in same province
+            # For example, Karachi and Hyderabad are both in Sindh
+            SINDH_CITIES = ['karachi', 'hyderabad', 'sukkur', 'larkana', 'nawabshah']
+            PUNJAB_CITIES = ['lahore', 'faisalabad', 'rawalpindi', 'multan', 'gujranwala']
+            KPK_CITIES = ['peshawar', 'mardan', 'abbottabad', 'swat']
+            BALOCHISTAN_CITIES = ['quetta', 'gwadar', 'turbat']
+            
+            city_lower = self.city.lower()
+            other_city_lower = other_profile.city.lower()
+            
+            # Check if in same province
+            if (city_lower in SINDH_CITIES and other_city_lower in SINDH_CITIES) or \
+            (city_lower in PUNJAB_CITIES and other_city_lower in PUNJAB_CITIES) or \
+            (city_lower in KPK_CITIES and other_city_lower in KPK_CITIES) or \
+            (city_lower in BALOCHISTAN_CITIES and other_city_lower in BALOCHISTAN_CITIES):
+                return 0.8
+        
+        # Same country (Pakistan) - lower score since most users are from Pakistan
+        if (self.country and other_profile.country and 
+            self.country.lower() == other_profile.country.lower()):
+            if self.country.lower() == 'pakistan':
+                return 0.6  # Lower score for same country within Pakistan
+            return 0.7  # Slightly higher for other countries
+        
+        # Different countries
+        return 0.3
+    
+
+    def _calculate_age_compatibility(self, other_age):
+        """
+        Calculate age compatibility
+        Returns score between 0 and 1
+        """
+        age_diff = abs(self.age - other_age)
+        
+        if age_diff <= 3:
+            return 1.0      # Perfect match
+        elif age_diff <= 5:
+            return 0.9      # Excellent
+        elif age_diff <= 7:
+            return 0.8      # Very good
+        elif age_diff <= 10:
+            return 0.7      # Good
+        elif age_diff <= 12:
+            return 0.6      # Okay
+        elif age_diff <= 15:
+            return 0.5      # Acceptable
+        else:
+            return 0.3      # Large age gap
+
+    def _calculate_practice_compatibility(self, other_practice_level):
+        """
+        Calculate practice level compatibility
+        Returns score between 0 and 1
+        """
+        level_values = {
+            'B': 1,  # Beginner
+            'I': 2,  # Intermediate
+            'A': 3,  # Advanced
+            'E': 4   # Expert
+        }
+        
+        self_val = level_values.get(self.practice_level, 2)
+        other_val = level_values.get(other_practice_level, 2)
+        
+        diff = abs(self_val - other_val)
+        
+        if diff == 0:
+            return 1.0      # Same level
+        elif diff == 1:
+            return 0.8      # Close levels
+        elif diff == 2:
+            return 0.5      # Moderately different
+        else:
+            return 0.3      # Very different
+
+    def _calculate_education_compatibility(self, other_education):
+        """
+        Calculate education compatibility
+        Returns score between 0 and 1
+        """
+        education_weights = {
+            'HS': 1,   # High School
+            'AD': 2,   # Associate Degree
+            'BD': 3,   # Bachelor's
+            'MD': 4,   # Master's
+            'PHD': 5,  # Doctorate
+            'OT': 2    # Other
+        }
+        
+        self_weight = education_weights.get(self.education, 2)
+        other_weight = education_weights.get(other_education, 2)
+        
+        diff = abs(self_weight - other_weight)
+        
+        if diff == 0:
+            return 1.0      # Same level
+        elif diff == 1:
+            return 0.8      # Close levels
+        elif diff == 2:
+            return 0.6      # Moderate difference
+        else:
+            return 0.4      # Big difference
     
     def get_public_profile_data(self):
         """Get profile data respecting privacy settings with caching"""
@@ -357,6 +494,56 @@ class UserProfile(models.Model):
         cache.set(cache_key, data, 3600)
         
         return data
+    
+    @classmethod
+    def new_matches_today(cls):
+        """
+        Class method to get profiles created today
+        """
+        today = timezone.now().date()
+        return cls.objects.filter(created_at__date=today)
+
+    def get_matches_count(self, threshold=50):
+        """
+        Count profiles with compatibility above threshold
+        """
+        cache_key = f"matches_count_{self.user_id}_{threshold}"
+        cached = cache.get(cache_key)
+        
+        if cached is not None:
+            return cached
+        
+        # Get all visible, approved, completed profiles
+        profiles = UserProfile.objects.filter(
+            is_visible=True,
+            approved=True,
+            #completed=True
+        ).exclude(user=self.user).select_related('user')[:100]  # Limit for performance
+        
+        count = 0
+        for profile in profiles:
+            try:
+                score = self.calculate_compatibility(profile)
+                if score > threshold:
+                    count += 1
+            except Exception:
+                continue
+        
+        # Cache for 30 minutes (since matches don't change often)
+        cache.set(cache_key, count, 1800)
+        
+        return count
+    
+    @classmethod
+    def get_total_matches_count(cls, user, threshold=50):
+        """
+        Class method to get total matches count for a user
+        """
+        try:
+            profile = user.userprofile
+            return profile.get_matches_count(threshold)
+        except UserProfile.DoesNotExist:
+            return 0
 
 
 class ActivityLog(models.Model):

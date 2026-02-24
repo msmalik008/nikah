@@ -1,3 +1,4 @@
+# api/routing.py
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 from channels.security.websocket import AllowedHostsOriginValidator
@@ -6,11 +7,11 @@ import os
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'api.settings')
 
-# Import WebSocket routing from each app
-import chat.routing
-
-# Initialize Django ASGI application for HTTP
+# Initialize Django ASGI application FIRST - before any app imports
 django_asgi_app = get_asgi_application()
+
+# NOW import WebSocket routing from each app (after Django is initialized)
+import chat.routing
 
 # Start with chat routes
 websocket_urlpatterns = []

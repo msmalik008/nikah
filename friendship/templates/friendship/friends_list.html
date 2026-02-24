@@ -1,0 +1,323 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Friends - {{ profile_user.username }}{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                {% if profile_user == request.user %}
+                    Your Friends
+                {% else %}
+                    {{ profile_user.username }}'s Friends
+                {% endif %}
+            </h2>
+            <p class="text-muted">
+                {{ total_friends }} friends • {{ online_friends }} online
+            </p>
+        </div>
+        
+        {% if profile_user == request.user %}
+        <div class="d-flex gap-2">
+            <a href="{% url 'friendship:get_likes' %}" class="btn btn-outline-primary">
+                <i class="fas fa-heart me-2"></i>Likes
+                {% if pending_requests %}
+                <span class="badge bg-danger ms-2">{{ pending_requests }}</span>
+                {% endif %}
+            </a>
+            <a href="{% url 'accounts:people_nearby' %}" class="btn btn-primary">
+                <i class="fas fa-user-plus me-2"></i>Find Friends
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Friend Requests Alert (for current user) -->
+    {% if profile_user == request.user and pending_requests %}
+    <div class="alert alert-info alert-dismissible fade show mb-4" role="alert">
+        <i class="fas fa-user-friends me-2"></i>
+        You have <strong>{{ pending_requests }} pending friend request{{ pending_requests|pluralize }}</strong>.
+        <a href="{% url 'friendship:get_likes' %}" class="alert-link">View requests</a>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+    
+    <!-- Search Bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-end-0">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" 
+                               name="search" 
+                               class="form-control border-start-0" 
+                               placeholder="Search friends by name..." 
+                               value="{{ request.GET.search }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <select name="sort" class="form-select">
+                        <option value="name" {% if request.GET.sort == 'name' %}selected{% endif %}>Sort by Name</option>
+                        <option value="recent" {% if request.GET.sort == 'recent' %}selected{% endif %}>Recently Added</option>
+                        <option value="online" {% if request.GET.sort == 'online' %}selected{% endif %}>Online First</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Apply</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Friends Grid -->
+    {% if friends %}
+    <div class="row">
+        {% for friend in friends %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 friend-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <!-- Profile Picture -->
+                        <a href="{% url 'accounts:view_profile' friend.id %}" class="me-3">
+                            {% if friend.profile_pic_url %}
+                                <img src="{{ friend.profile_pic_url }}" 
+                                     class="rounded-circle"
+                                     style="width: 60px; height: 60px; object-fit: cover;"
+                                     alt="{{ friend.username }}">
+                            {% else %}
+                                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center"
+                                     style="width: 60px; height: 60px;">
+                                    <span class="text-white fs-4">{{ friend.username|first|upper }}</span>
+                                </div>
+                            {% endif %}
+                        </a>
+                        
+                        <!-- User Info -->
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <a href="{% url 'accounts:view_profile' friend.id %}" 
+                                           class="text-decoration-none text-dark fw-bold">
+                                            {{ friend.get_full_name|default:friend.username }}
+                                        </a>
+                                    </h6>
+                                    <p class="small text-muted mb-1">
+                                        @{{ friend.username }}
+                                    </p>
+                                </div>
+                                
+                                <!-- Online Status -->
+                                {% if friend.is_online %}
+                                <span class="badge bg-success" title="Online">
+                                    <i class="fas fa-circle"></i>
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary" title="Last active {{ friend.last_active|timesince }} ago">
+                                    <i class="fas fa-circle"></i>
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Location -->
+                            {% if friend.city %}
+                            <p class="small text-muted mb-2">
+                                <i class="fas fa-map-marker-alt me-1"></i>
+                                {% if friend.city %}{{ friend.city }}{% endif %}
+                                {% if friend.city and friend.country %}, {% endif %}
+                                {% if friend.country %}{{ friend.country }}{% endif %}
+                            </p>
+                            {% endif %}
+                            
+                            <!-- Mutual Friends -->
+                            {% if friend.mutual_friends_count > 0 %}
+                            <p class="small text-muted mb-2">
+                                <i class="fas fa-user-friends me-1"></i>
+                                {{ friend.mutual_friends_count }} mutual friend{{ friend.mutual_friends_count|pluralize }}
+                            </p>
+                            {% endif %}
+                            
+                            <!-- Action Buttons -->
+                            <div class="d-flex gap-2 mt-2">
+                                <a href="{% url 'chat:send_message' friend.id %}" 
+                                   class="btn btn-sm btn-outline-primary flex-grow-1">
+                                    <i class="fas fa-envelope me-1"></i>Message
+                                </a>
+                                
+                                {% if profile_user == request.user %}
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                            type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-h"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'accounts:view_profile' friend.id %}">
+                                                <i class="fas fa-eye me-2"></i>View Profile
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="#" 
+                                               onclick="unfriend({{ friend.id }}, '{{ friend.username }}')">
+                                                <i class="fas fa-user-minus me-2 text-danger"></i>Unfriend
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="#"
+                                               onclick="blockUser({{ friend.id }}, '{{ friend.username }}')">
+                                                <i class="fas fa-ban me-2"></i>Block
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                    Previous
+                </a>
+            </li>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                        {{ num }}
+                    </a>
+                </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                    Next
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-5">
+        <div class="mb-4">
+            <i class="fas fa-user-friends fa-4x" style="color: var(--text-muted);"></i>
+        </div>
+        <h4 class="mb-3">No Friends Yet</h4>
+        <p class="text-muted mb-4">
+            {% if profile_user == request.user %}
+                You haven't added any friends yet. Start connecting with people!
+            {% else %}
+                {{ profile_user.username }} hasn't added any friends yet.
+            {% endif %}
+        </p>
+        {% if profile_user == request.user %}
+        <a href="{% url 'accounts:people_nearby' %}" class="btn btn-primary">
+            <i class="fas fa-search me-2"></i>Find People
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Unfriend function
+function unfriend(userId, username) {
+    if (confirm(`Are you sure you want to unfriend ${username}?`)) {
+        fetch(`/friends/remove/${userId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(`You are no longer friends with ${username}`, 'info');
+                // Remove the card or reload
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showToast('Error unfriending user', 'error');
+            }
+        });
+    }
+}
+
+// Block User
+function blockUser(userId, username) {
+    if (confirm(`Are you sure you want to block ${username}?`)) {
+        fetch(`/friends/block/${userId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(`${username} has been blocked`, 'warning');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showToast('Error blocking user', 'error');
+            }
+        });
+    }
+}
+
+// Toast notification
+function showToast(message, type = 'info') {
+    const toast = $(`
+        <div class="toast align-items-center text-white bg-${type} border-0 position-fixed bottom-0 end-0 m-3" 
+             role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `);
+    
+    $('body').append(toast);
+    const bsToast = new bootstrap.Toast(toast[0]);
+    bsToast.show();
+    
+    toast.on('hidden.bs.toast', function() {
+        $(this).remove();
+    });
+}
+</script>
+{% endblock %}

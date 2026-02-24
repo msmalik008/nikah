@@ -1,0 +1,23 @@
+{% load friendship_tags %}
+
+{% get_relationship request.user viewed_user as relationship %}
+
+{% if relationship %}
+    {% if relationship.status == 'friends' %}
+        <span class="friend-badge friends">
+            <i class="fas fa-check-circle me-1"></i> Friends
+        </span>
+    {% elif relationship.status == 'pending_sender' %}
+        <span class="friend-badge request-sent">
+            <i class="fas fa-clock me-1"></i> Request Sent
+        </span>
+    {% elif relationship.status == 'pending_receiver' %}
+        <span class="friend-badge request-received">
+            <i class="fas fa-hourglass-half me-1"></i> Request Received
+        </span>
+    {% elif relationship.status == 'blocked_by_a' or relationship.status == 'blocked_by_b' %}
+        <span class="friend-badge blocked">
+            <i class="fas fa-ban me-1"></i> Blocked
+        </span>
+    {% endif %}
+{% endif %}

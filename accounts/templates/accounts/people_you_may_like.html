@@ -1,0 +1,70 @@
+        <!-- People You May Like -->
+        <div class="dashboard-card">
+            <div class="dashboard-card-header">
+                <h2 class="dashboard-card-title">People You May Like</h2>
+                <a href="{% url 'accounts:people_nearby' %}" class="btn btn-link btn-sm">
+                    View All <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+    
+            <div class="row" id="peopleSuggestions">
+                {% for person in suggested_people|slice:":4" %}
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="text-center">
+                        <!-- Round Photo with URL to Profile View -->
+                        <a href="{% url 'accounts:view_profile' person.user.id %}">
+                            {% if person.profile.profile_pic %}
+                                <img src="{{ person.profile.profile_pic.url }}"
+                                    class="rounded-circle mb-2"
+                                    style="width: 100px; height: 100px; object-fit: cover; border: 2px solid var(--primary-color);"
+                                    alt="{{ person.user.username }}">
+                            {% else %}
+                                <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto mb-2"
+                                    style="width: 100px; height: 100px;">
+                                    <i class="fas fa-user fa-3x text-primary"></i>
+                                </div>
+                            {% endif %}
+                        </a>
+                        
+                        <!-- Name and Age in a row with URL to Profile View -->
+                        <h6 class="mb-1">
+                            <a href="{% url 'accounts:view_profile' person.user.id %}" 
+                            class="text-decoration-none text-dark">
+                                {{ person.user.username }}{% if person.profile.age %}, {{ person.profile.age }}{% endif %}
+                            </a>
+                        </h6>
+                        
+                        <!-- Location, Sect and Education in a row -->
+                        <p class="small text-muted mb-0">
+                            {% if person.profile.show_location and person.profile.city %}
+                                <i class="fas fa-map-marker-alt"></i> {{ person.profile.city }}
+                            {% endif %} <br>
+                            
+                            {% if person.profile.sect %}
+                                {{ person.profile.sect }}
+                                {% if person.profile.sect and person.profile.caste %} | {% endif %}
+                                {{ person.profile.caste }}
+                            {% endif %} <br>
+                            
+                            {% if person.profile.education %}
+                                <i class="fas fa-graduation-cap"></i> {{ person.profile.get_education_display }}
+                            {% endif %}
+                            
+                            {% if not person.profile.show_location and not person.profile.sect and not person.profile.education %}
+                                <span class="fst-italic">No additional info</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12 text-center py-5">
+                    <i class="fas fa-heart-broken fa-4x mb-3" style="color: var(--text-muted);"></i>
+                    <h4 class="mb-3">No Suggestions Yet</h4>
+                    <p class="text-muted mb-4">Complete your profile to get personalized suggestions.</p>
+                    <a href="{% url 'accounts:profile_edit' %}" class="btn btn-primary">
+                        <i class="fas fa-edit me-2"></i> Complete Profile
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>

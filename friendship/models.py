@@ -1,4 +1,6 @@
-from django.db import models, transaction
+import traceback
+
+from django.db import models, transaction, IntegrityError
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
@@ -125,14 +127,21 @@ class Friendship(models.Model):
                 result = friendship
             else:
                 # Need to invert status for perspective
-                friendship.status = cls.get_inverted_status(friendship.status)
-                result = friendship
+                inverted_friendship = Friendship(
+                    user_a=user1,
+                    user_b=user2,
+                    status=cls.get_inverted_status(friendship.status),
+                    initiator=friendship.initiator,
+                    created_at=friendship.created_at,
+                    updated_at=friendship.updated_at
+                )
+                result = inverted_friendship
+            # Cache for 5 minutes
+            cache.set(cache_key, result, 300)
+            return result
         except cls.DoesNotExist:
+            cache.set(cache_key, None, 300)
             result = None
-        
-        # Cache for 5 minutes
-        cache.set(cache_key, result, 300)
-        return result
     
     @classmethod
     def get_inverted_status(cls, status):
@@ -162,6 +171,20 @@ class Friendship(models.Model):
             # Determine if we need to invert status
             actual_status = new_status if u1 == user1 else cls.get_inverted_status(new_status)
             
+            # If new status is STRANGERS, delete the record instead of keeping it
+            if actual_status == FriendshipStatus.STRANGERS:
+                deleted_count = cls.objects.filter(user_a=u1, user_b=u2).delete()[0]
+                if deleted_count > 0:
+                    # Clear cache
+                    cache_keys = [
+                        f"friends_{user1.id}",
+                        f"friends_{user2.id}",
+                        f"friendship_status_{user1.id}_{user2.id}",
+                        f"friendship_status_{user2.id}_{user1.id}",
+                    ]
+                    cache.delete_many(cache_keys)
+                return None
+            
             friendship, created = cls.objects.get_or_create(
                 user_a=u1,
                 user_b=u2,
@@ -180,6 +203,15 @@ class Friendship(models.Model):
                 friendship.status = actual_status
                 friendship.initiator = initiator
                 friendship.save()
+            
+            # Clear cache
+            cache_keys = [
+                f"friends_{user1.id}",
+                f"friends_{user2.id}",
+                f"friendship_status_{user1.id}_{user2.id}",
+                f"friendship_status_{user2.id}_{user1.id}",
+            ]
+            cache.delete_many(cache_keys)
             
             return friendship
     
@@ -269,67 +301,120 @@ class ProfileLike(models.Model):
     def __str__(self):
         return f"{self.liker.username} likes {self.liked.username}"
     
-    def save(self, *args, **kwargs):
-        is_new = self.pk is None
-        
-        with transaction.atomic():
-            super().save(*args, **kwargs)
-            
-            # Check for mutual like
-            if is_new:
-                self.check_mutual_like()
-                
-                # Clear like caches
-                cache_keys = [
-                    f"likes_received_{self.liked_id}",
-                    f"likes_sent_{self.liker_id}",
-                    f"mutual_likes_{self.liker_id}",
-                    f"mutual_likes_{self.liked_id}",
-                ]
-                cache.delete_many(cache_keys)
-    
-    def check_mutual_like(self):
-        """Check and update mutual like status"""
-        mutual = ProfileLike.objects.filter(
-            liker=self.liked,
-            liked=self.liker
-        ).exists()
-        
-        if mutual and not self.is_mutual:
-            self.is_mutual = True
-            self.save(update_fields=['is_mutual', 'updated_at'])
-            
-            # Update the reverse like
-            ProfileLike.objects.filter(
-                liker=self.liked,
-                liked=self.liker
-            ).update(is_mutual=True, updated_at=timezone.now())
-        
-        return mutual
-    
     @classmethod
     def create_like(cls, liker, liked_user):
-        """Create a profile like and check for mutual match"""
-        with transaction.atomic():
-            like, created = cls.objects.get_or_create(
+        """
+        Create a profile like and check for mutual match
+        Simplified version without recursion issues
+        """
+        try:
+            logger.info(f"Creating like from user {liker.id} to user {liked_user.id}")
+            
+            # Basic validation
+            if not liker or not liked_user:
+                logger.error("Invalid users provided")
+                return None, False
+            
+            if liker == liked_user:
+                logger.error("User cannot like themselves")
+                return None, False
+            
+            # Check if like already exists
+            existing_like = cls.objects.filter(
                 liker=liker,
                 liked=liked_user
-            )
+            ).first()
             
-            if created:
-                # Check for mutual like
-                like.check_mutual()
+            if existing_like:
+                logger.info(f"Like already exists: {existing_like.id}")
+                return existing_like, False
+            
+            # Create the like
+            try:
+                with transaction.atomic():
+                    like = cls.objects.create(
+                        liker=liker,
+                        liked=liked_user,
+                        is_mutual=False
+                    )
+                    logger.info(f"Like created with ID: {like.id}")
+                    
+                    # Check for mutual like
+                    reverse_like = cls.objects.filter(
+                        liker=liked_user,
+                        liked=liker
+                    ).first()
+                    
+                    if reverse_like:
+                        logger.info("Mutual like detected!")
+                        # Update both likes to mutual
+                        like.is_mutual = True
+                        like.save(update_fields=['is_mutual', 'updated_at'])
+                        
+                        reverse_like.is_mutual = True
+                        reverse_like.save(update_fields=['is_mutual', 'updated_at'])
+                        
+                        # Clear caches
+                        cache.delete_many([
+                            f"mutual_matches_{liker.id}",
+                            f"mutual_matches_{liked_user.id}",
+                            f"likes_received_{liker.id}",
+                            f"likes_received_{liked_user.id}",
+                            f"likes_sent_{liker.id}",
+                            f"likes_sent_{liked_user.id}",
+                        ])
+                    
+                    return like, True
+                    
+            except IntegrityError as e:
+                logger.error(f"Integrity error creating like: {e}")
+                # Try to get the existing like (race condition)
+                like = cls.objects.get(liker=liker, liked=liked_user)
+                return like, False
                 
-                # Log activity
-                from useractivity.models import Activity
-                Activity.create_activity(
-                    user=liker,
-                    activity_type='profile_liked',
-                    target_user=liked_user,
-                    metadata={'like_id': like.id}
-                )
+        except Exception as e:
+            logger.error(f"Unexpected error in create_like: {e}", exc_info=True)
+            raise
+    
+    @classmethod
+    def remove_like(cls, liker, liked_user):
+        """Remove a like and update mutual status"""
+        try:
+            like = cls.objects.get(liker=liker, liked=liked_user)
             
-            return like, created
+            with transaction.atomic():
+                # Check if there's a reverse like
+                reverse_like = cls.objects.filter(
+                    liker=liked_user,
+                    liked=liker
+                ).first()
+                
+                # If reverse like exists, remove its mutual status
+                if reverse_like and reverse_like.is_mutual:
+                    reverse_like.is_mutual = False
+                    reverse_like.save(update_fields=['is_mutual', 'updated_at'])
+                
+                # Delete the like
+                like.delete()
+                
+                # Clear caches
+                cache.delete_many([
+                    f"mutual_matches_{liker.id}",
+                    f"mutual_matches_{liked_user.id}",
+                    f"likes_received_{liker.id}",
+                    f"likes_received_{liked_user.id}",
+                    f"likes_sent_{liker.id}",
+                    f"likes_sent_{liked_user.id}",
+                ])
+                
+                return True
+                
+        except cls.DoesNotExist:
+            logger.warning(f"Like not found: {liker.id} -> {liked_user.id}")
+            return False
+        except Exception as e:
+            logger.error(f"Error removing like: {e}", exc_info=True)
+            return False
     
     @classmethod
     def get_mutual_matches(cls, user):
@@ -341,14 +426,13 @@ class ProfileLike(models.Model):
             return cached
         
         matches = cls.objects.filter(
-            (models.Q(liker=user) | models.Q(liked=user)) &
-            models.Q(is_mutual=True)
+            (Q(liker=user) | Q(liked=user)) &
+            Q(is_mutual=True)
         ).select_related('liker__userprofile', 'liked__userprofile')
         
-        # Cache for 5 minutes
         cache.set(cache_key, matches, 300)
         return matches
-    
+
     @classmethod
     def get_likes_received(cls, user):
         """Get all likes received by user (not mutual) with caching"""
@@ -363,14 +447,22 @@ class ProfileLike(models.Model):
             is_mutual=False
         ).select_related('liker__userprofile')
         
-        # Cache for 2 minutes
         cache.set(cache_key, likes, 120)
         return likes
-    
+
     @classmethod
     def get_likes_given(cls, user):
         """Get all likes given by user (not mutual)"""
-        return cls.objects.filter(
+        cache_key = f"likes_sent_{user.id}"
+        cached = cache.get(cache_key)
+        
+        if cached is not None:
+            return cached
+        
+        likes = cls.objects.filter(
             liker=user,
             is_mutual=False
         ).select_related('liked__userprofile')
+        
+        cache.set(cache_key, likes, 120)
+        return likes

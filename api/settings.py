@@ -104,6 +104,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 #'quizapp.context_processors.user_profile',
                 #'quizapp.context_processors.site_settings',
+                'friendship.context_processors.friendship_counts',
             ],
         },
     },

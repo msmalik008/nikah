@@ -2,6 +2,46 @@
 {% extends 'dashboard/base.html' %}
 {% load static %}
 
+<!-- Add this CSS to make the hover effect smooth -->
+<style>
+    .match-card {
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+    
+    .match-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    
+    .match-img {
+        transition: transform 0.3s ease;
+        display: block;
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .hover-primary:hover {
+        color: var(--primary-color, #6c5ce7) !important;
+    }
+    
+    .match-info {
+        padding: 15px;
+    }
+    
+    .match-name {
+        margin: 0 0 5px 0;
+        font-size: 1.1rem;
+    }
+    
+    .match-name a {
+        transition: color 0.2s ease;
+    }
+</style>
+
+
 {% block dashboard_content %}
 <div class="row">
     <!-- Welcome Section -->
@@ -10,7 +50,7 @@
             <div class="dashboard-card-header">
                 <div>
                     <h1 class="dashboard-card-title">Welcome back, {{ user.get_full_name|default:user.username }}! 👋</h1>
-                    <p class="text-muted mb-0">Here's what's happening with your matches today</p>
+                    <p class="stat-label">Here's what's happening with your matches today</p>
                 </div>
                 <div class="d-flex gap-2">
                     <a href="{% url 'accounts:people_nearby' %}" class="btn btn-primary btn-sm">
@@ -25,147 +65,89 @@
     </div>
 </div>
 
-<div class="row">
-    <!-- Quick Stats -->
-    <div class="col-md-3 col-sm-6 mb-4">
-        <div class="stat-card">
-            <i class="fas fa-heart fa-2x mb-3" style="color: var(--accent-color);"></i>
-            <div class="stat-number">{{ total_matches|default:"0" }}</div>
-            <div class="stat-label">Total Matches</div>
-        </div>
-    </div>
-    
-    <div class="col-md-3 col-sm-6 mb-4">
-        <div class="stat-card">
-            <i class="fas fa-eye fa-2x mb-3" style="color: var(--primary-color);"></i>
-            <div class="stat-number">{{ profile_views|default:"0" }}</div>
-            <div class="stat-label">Profile Views</div>
-        </div>
-    </div>
-    
-    <div class="col-md-3 col-sm-6 mb-4">
-        <div class="stat-card">
-            <i class="fas fa-users fa-2x mb-3" style="color: var(--secondary-color);"></i>
-            <div class="stat-number">{{ new_matches_today|default:"0" }}</div>
-            <div class="stat-label">New Today</div>
-        </div>
-    </div>
-    
-    <div class="col-md-3 col-sm-6 mb-4">
-        <div class="stat-card">
-            <i class="fas fa-comments fa-2x mb-3" style="color: #4CAF50;"></i>
-            <div class="stat-number">{{ unread_messages_count|default:"0" }}</div>
-            <div class="stat-label">Unread Messages</div>
-        </div>
-    </div>
-</div>
+
 
 <div class="row">
-    <!-- People You May Like -->
+    
     <div class="col-lg-8 mb-4">
+
+        <!-- People Nearby -->
         <div class="dashboard-card">
             <div class="dashboard-card-header">
-                <h2 class="dashboard-card-title">People You May Like</h2>
+                <h2 class="dashboard-card-title">Nearby Matches</h2>
                 <a href="{% url 'accounts:people_nearby' %}" class="btn btn-link btn-sm">
                     View All <i class="fas fa-arrow-right"></i>
                 </a>
             </div>
-            
-            <div class="row" id="peopleSuggestions">
-                {% for person in suggested_people|slice:":4" %}
-                <div class="col-lg-6 mb-3">
-                    <div class="match-card dashboard-card">
-                        <!-- Profile Image -->
-                        {% if person.profile_image %}
-                        <img src="{{ person.profile_image.url }}" 
-                             alt="{{ person.user.get_full_name }}" 
-                             class="match-img">
-                        {% else %}
-                        <img src="https://via.placeholder.com/300x200/9c27b0/ffffff?text=SoulMate" 
-                             alt="{{ person.user.get_full_name }}" 
-                             class="match-img">
-                        {% endif %}
-                        
-                        <!-- Distance Badge -->
-                        {% if person.distance %}
-                        <div class="position-absolute top-2 start-2">
-                            <span class="badge bg-dark">
-                                <i class="fas fa-map-marker-alt me-1"></i>{{ person.distance }} km
+
+            <div class="row" id="peopleNearby">
+                {% for person in people_nearby %}
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="text-center position-relative">
+                        <!-- Distance Indicator Badge -->
+                        <div class="mb-2">
+                            
+                            <!-- Gender Indicator (optional) -->
+                            {% if not person.is_opposite_gender %}
+                            <span class="badge bg-warning ms-1" title="Not opposite gender">
+                                <i class="fas fa-venus-mars"></i>
                             </span>
-                        </div>
-                        {% endif %}
-                        
-                        <!-- Action Overlay -->
-                        <div class="match-overlay">
-                            <div class="w-100">
-                                <a href="{% url 'accounts:view_profile' person.user.id %}" 
-                                   class="btn btn-primary btn-sm w-100 mb-2">
-                                    <i class="fas fa-eye me-1"></i> View Profile
-                                </a>
-                                <a href="{% url 'chat:send_message' person.user.id %}" 
-                                   class="btn btn-success btn-sm w-100 mb-2">
-                                    <i class="fas fa-envelope me-1"></i> Message
-                                </a>
-                                <button onclick="sendLike({{ person.user.id }})" 
-                                        class="btn btn-danger btn-sm w-100">
-                                    <i class="fas fa-heart me-1"></i> Like
-                                </button>
-                            </div>
+                            {% endif %}
                         </div>
                         
-                        <!-- Profile Info -->
-                        <div class="match-info">
-                            <h5 class="match-name">
-                                {{ person.user.get_full_name|default:person.user.username }}, 
-                                {{ person.age|default:"25" }}
-                            </h5>
-                            <p class="match-age text-muted mb-2">
-                                <i class="fas fa-map-marker-alt me-1"></i>{{ person.city|default:"Unknown" }}
-                            </p>
-                            <div class="d-flex gap-1 flex-wrap">
-                                {% for interest in person.interests.all|slice:":3" %}
-                                <span class="badge bg-dark">{{ interest.name }}</span>
-                                {% endfor %}
-                            </div>
-                        </div>
+                        <!-- Round Photo with URL to Profile View -->
+                        <a href="{% url 'accounts:view_profile' person.user.id %}">
+                            {% if person.profile.profile_pic %}
+                                <img src="{{ person.profile.profile_pic.url }}"
+                                    class="rounded-circle mb-2"
+                                    style="width: 100px; height: 100px; object-fit: cover; border: 3px solid {% if person.is_opposite_gender %}var(--primary-color){% else %}#6c757d{% endif %};"
+                                    alt="{{ person.user.username }}">
+                            {% else %}
+                                <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto mb-2"
+                                    style="width: 100px; height: 100px; border: 3px solid {% if person.is_opposite_gender %}var(--primary-color){% else %}#6c757d{% endif %};">
+                                    <i class="fas fa-user fa-3x text-primary"></i>
+                                </div>
+                            {% endif %}
+                        </a>
+                        
+                        <!-- Name and Age -->
+                        <h6 class="mb-1">
+                            <a href="{% url 'accounts:view_profile' person.user.id %}" 
+                            class="text-decoration-none text-light">
+                                {{ person.user.username }}{% if person.profile.age %}, {{ person.profile.age }}{% endif %}
+                            </a>
+                        </h6>
+
+                        
+                        <!-- Location -->
+                        <p class="small text-secondary mb-2">
+                            <i class="fas fa-map-marker-alt"></i>
+                            {% if person.profile.show_location %}
+                                {% if person.profile.city %}{{ person.profile.city }}{% endif %}
+                                {% if person.profile.city and person.profile.country %}, {% endif %}
+                                {% if person.profile.country %}{{ person.profile.country }}{% endif %}
+                            {% else %}
+                                Location hidden
+                            {% endif %}
+                        </p>
                     </div>
                 </div>
                 {% empty %}
                 <div class="col-12 text-center py-4">
-                    <i class="fas fa-heart-broken fa-3x mb-3" style="color: var(--text-muted);"></i>
-                    <h4>No suggestions yet</h4>
-                    <p class="text-muted">Complete your profile to get better suggestions</p>
-                    <a href="{% url 'accounts:profile_edit' %}" class="btn btn-primary">
-                        <i class="fas fa-edit me-1"></i> Complete Profile
+                    <i class="fas fa-map-marker-alt fa-3x mb-3 text-muted"></i>
+                    <h5>No Nearby People Found</h5>
+                    <p class="text-muted small">
+                        {% if user.userprofile.gender %}
+                            We couldn't find any {{ user.userprofile.get_opposite_gender_display|default:"opposite gender" }} profiles near you.
+                        {% else %}
+                            Update your profile with your gender to find matches.
+                        {% endif %}
+                    </p>
+                    <a href="{% url 'accounts:profile_edit' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-edit me-1"></i> Update Profile
                     </a>
                 </div>
                 {% endfor %}
-            </div>
-        </div>
-        
-        <!-- People Nearby -->
-        <div class="dashboard-card mb-4">
-            <div class="dashboard-card-header">
-                <h2 class="dashboard-card-title">People Nearby</h2>
-                <button onclick="loadPeopleNearby()" class="btn btn-outline-light btn-sm">
-                    <i class="fas fa-redo me-1"></i> Refresh
-                </button>
-            </div>
-            
-            <!-- Statistics (optional) -->
-            <div id="peopleStats" class="px-3 pb-2">
-                <!-- Will be filled by JavaScript -->
-            </div>
-            
-            <!-- People Grid - Loaded via AJAX -->
-            <div class="row" id="peopleSuggestions">
-                <!-- Initial loading state -->
-                <div class="col-12 text-center py-4">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-2 text-muted">Finding people nearby...</p>
-                </div>
             </div>
         </div>
 
@@ -179,118 +161,216 @@
             </div>
             
             <div id="timelinePosts">
-                {% for post in recent_posts|slice:":3" %}
-                <div class="timeline-post">
-                    <div class="post-header">
-                        {% if post.user.userprofile.profile_image %}
-                        <img src="{{ post.user.userprofile.profile_image.url }}" 
-                             alt="{{ post.user.username }}" 
-                             class="post-avatar">
+                {% for post in posts|slice:":5" %}
+                <div class="timeline-post mb-3 p-3 border-bottom" id="post-{{ post.id }}" data-post-id="{{ post.id }}">
+                    <!-- Post Header -->
+                    <div class="post-header d-flex align-items-center mb-2">
+                        {% if post.user.userprofile.profile_pic %}
+                        <img src="{{ post.user.userprofile.profile_pic.url }}" 
+                            alt="{{ post.user.username }}" 
+                            class="rounded-circle me-2"
+                            style="width: 40px; height: 40px; object-fit: cover;">
                         {% else %}
-                        <div class="post-avatar bg-primary d-flex align-items-center justify-content-center">
+                        <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-2"
+                            style="width: 40px; height: 40px;">
                             <i class="fas fa-user text-white"></i>
                         </div>
                         {% endif %}
                         <div class="post-user-info">
-                            <h6 class="post-username">{{ post.user.get_full_name|default:post.user.username }}</h6>
-                            <span class="post-time">{{ post.created_at|timesince }} ago</span>
+                            <h6 class="mb-0">{{ post.user.get_full_name|default:post.user.username }}</h6>
+                            <small style="font-size:x-small; color:grey">{{ post.created_at|timesince }} ago</small>
                         </div>
                     </div>
                     
-                    <div class="post-content">
-                        <p>{{ post.content|truncatechars:200 }}</p>
+                    <!-- Post Content -->
+                    <div class="post-content mb-2">
+                        <p class="mb-1">{{ post.content|truncatechars:150 }}</p>
                         {% if post.image %}
-                        <img src="{{ post.image.url }}" alt="Post image" class="post-image">
+                        <img src="{{ post.image.url }}" 
+                            alt="Post image" 
+                            class="img-fluid rounded"
+                            style="max-height: 150px; object-fit: cover;">
                         {% endif %}
                     </div>
                     
-                    <div class="post-actions">
-                        <button class="post-action-btn like-post-btn" 
+                    <!-- Post Stats -->
+                    <div class="d-flex text-muted small mb-2">
+                        <span class="me-3"><i class="fas fa-heart me-1"></i> <span class="post-likes-count">{{ post.likes_count|default:"0" }}</span></span>
+                        <span><i class="fas fa-comment me-1"></i> <span class="post-comments-count">{{ post.comments_count|default:"0" }}</span></span>
+                    </div>
+                    
+                    <!-- Post Actions -->
+                    <div class="post-actions d-flex gap-3 mb-3">
+                        <button class="btn btn-sm btn-outline-danger like-post-btn" 
                                 data-post-id="{{ post.id }}"
-                                onclick="likePost({{ post.id }})">
-                            <i class="fas fa-heart"></i>
-                            <span class="count">{{ post.likes_count|default:"0" }}</span>
+                                onclick="likePost({{ post.id }}, this)"
+                                {% if post.user_liked %}data-liked="true"{% endif %}>
+                            <i class="fas fa-heart {% if post.user_liked %}text-danger{% endif %}"></i>
+                            <span class="like-count">{{ post.likes_count|default:"0" }}</span>
                         </button>
                         
-                        <button class="post-action-btn comment-post-btn" 
-                                onclick="focusComment({{ post.id }})">
+                        <button class="btn btn-sm btn-outline-primary comment-post-btn" 
+                                onclick="toggleComments({{ post.id }})">
                             <i class="fas fa-comment"></i>
-                            <span>{{ post.comments_count|default:"0" }}</span>
+                            <span class="comment-count">{{ post.comments_count|default:"0" }}</span>
                         </button>
                         
-                        <button class="post-action-btn share-post-btn" 
-                                onclick="sharePost({{ post.id }})">
+                        <button class="btn btn-sm btn-outline-success share-post-btn" 
+                                onclick="sharePost({{ post.id }}, '{{ post.user.username }}')">
                             <i class="fas fa-share"></i>
                         </button>
                     </div>
                     
-                    <!-- Comment Form -->
-                    <div class="comment-section" id="comment-section-{{ post.id }}" style="display: none;">
-                        <form class="comment-form" onsubmit="submitComment(event, {{ post.id }})">
-                            <input type="text" class="comment-input" 
-                                   placeholder="Write a comment..." 
-                                   id="comment-input-{{ post.id }}">
-                            <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                        </form>
+                    <!-- Comments Section (hidden by default) -->
+                    <div class="comments-section mt-3" id="comments-section-{{ post.id }}" style="display: block;">
+                        <!-- Existing Comments - Only top-level comments -->
+                        <div class="existing-comments mb-3" id="existing-comments-{{ post.id }}">
+                            {% for comment in post.comments.all|slice:":5" %}
+                                {% if not comment.parent %}
+                                    {% include 'useractivity/partials/comment_item.html' with comment=comment %}
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Comment Form -->
+                        <div class="comment-form-container mt-2" id="comment-form-container-{{ post.id }}">
+                            <form class="comment-form d-flex gap-2" 
+                                onsubmit="submitComment(event, {{ post.id }})">
+                                {% csrf_token %}
+                                <input type="text" 
+                                    class="form-control form-control-sm comment-input" 
+                                    placeholder="Write a comment..." 
+                                    id="comment-input-{{ post.id }}"
+                                    data-post-id="{{ post.id }}"
+                                    required>
+                                <button type="submit" class="btn btn-primary btn-sm comment-submit-btn">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
                 {% empty %}
                 <div class="text-center py-4">
                     <i class="fas fa-newspaper fa-3x mb-3" style="color: var(--text-muted);"></i>
-                    <h4>No posts yet</h4>
-                    <p class="text-muted">Be the first to post in your timeline!</p>
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPostModal">
-                        <i class="fas fa-plus me-1"></i> Create Post
-                    </button>
+                    <h5>No posts yet</h5>
+                    <p class="text-muted small">Be the first to post or connect with friends!</p>
+                    <a href="{% url 'useractivity:timeline' %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus me-1"></i> Go to Timeline
+                    </a>
                 </div>
                 {% endfor %}
             </div>
         </div>
     </div>
     
-    <!-- Quick Actions & Notifications -->
+    <!--------------------------------------- Right Sidebar Code --------------------------------------->
+
     <div class="col-lg-4">
-        <!-- Quick Actions -->
+
+        <!-- Stats Count in right side bar -->
         <div class="dashboard-card mb-4">
             <div class="dashboard-card-header">
-                <h2 class="dashboard-card-title">Quick Actions</h2>
+                <h2 class="dashboard-card-title">Your Stats</h2>
             </div>
             
-            <div class="row g-2">
-                <div class="col-6">
-                    <a href="{% url 'accounts:profile_edit' %}" class="quick-action-btn">
-                        <i class="fas fa-user-edit fa-lg"></i>
-                        <span>Edit Profile</span>
-                    </a>
+            <div class="stats-vertical">
+                <!-- Total Matches -->
+                <div class="stat-item d-flex justify-content-between align-items-center p-3 border-bottom">
+                    <div>
+                        <i class="fas fa-heart me-2" style="color: var(--accent-color);"></i>
+                        <span class="stat-label">Total Matches</span>
+                    </div>
+                    <span class="stat-number fs-4 fw-bold">{{ total_matches|default:"0" }}</span>
                 </div>
                 
-                <div class="col-6">
-                    <a href="{% url 'accounts:people_nearby' %}" class="quick-action-btn">
-                        <i class="fas fa-search fa-lg"></i>
-                        <span>Find People</span>
-                    </a>
+                <!-- Profile Views -->
+                <div class="stat-item d-flex justify-content-between align-items-center p-3 border-bottom">
+                    <div>
+                        <i class="fas fa-eye me-2" style="color: var(--primary-color);"></i>
+                        <span class="stat-label">Profile Views</span>
+                    </div>
+                    <span class="stat-number fs-4 fw-bold">{{ profile_views|default:"0" }}</span>
                 </div>
                 
-                <div class="col-6">
-                    <a href="{% url 'friendship:get_likes' %}" class="quick-action-btn">
-                        <i class="fas fa-heart fa-lg"></i>
-                        <span>View Likes</span>
-                        {% if new_likes_count %}
-                        <span class="badge bg-danger position-absolute top-0 end-0">
-                            {{ new_likes_count }}
-                        </span>
+                <!-- New Today -->
+                <div class="stat-item d-flex justify-content-between align-items-center p-3 border-bottom">
+                    <div>
+                        <i class="fas fa-users me-2" style="color: var(--secondary-color);"></i>
+                        <span class="stat-label">Newly Registered</span>
+                    </div>
+                    <span class="stat-number fs-4 fw-bold">{{ new_matches_today|default:"0" }}</span>
+                </div>
+                
+                <!-- Unread Messages -->
+                <div class="stat-item d-flex justify-content-between align-items-center p-3">
+                    <div>
+                        <i class="fas fa-comments me-2" style="color: #4CAF50;"></i>
+                        <span class="stat-label">Unread Messages</span>
+                    </div>
+                    <span class="stat-number fs-4 fw-bold">{{ unread_messages_count|default:"0" }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compatibility -->
+        <div class="dashboard-card mb-4">
+            <div class="dashboard-card-header">
+                <h2 class="dashboard-card-title">Compatibility</h2>
+                <a href="{% url 'accounts:people_nearby' %}" class="btn btn-link btn-sm">
+                    View All <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="people-suggestions-vertical">
+                {% for person in suggested_people|slice:":3" %}
+                <div class="suggestion-item d-flex align-items-center p-3 border-bottom">
+                    <!-- Profile Photo -->
+                    <a href="{% url 'accounts:view_profile' person.user.id %}" class="me-3">
+                        {% if person.profile.profile_pic %}
+                            <img src="{{ person.profile.profile_pic.url }}"
+                                class="rounded-circle"
+                                style="width: 70px; height: 70px; object-fit: cover; border: 2px solid var(--primary-color);"
+                                alt="{{ person.user.username }}">
+                        {% else %}
+                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center"
+                                style="width: 50px; height: 50px; border: 2px solid var(--primary-color);">
+                                <i class="fas fa-user fa-lg text-primary"></i>
+                            </div>
                         {% endif %}
                     </a>
+                    
+                    <!-- User Info -->
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">
+                            <a href="{% url 'accounts:view_profile' person.user.id %}" 
+                            class="text-decoration-none text-light fw-bold">
+                                {{ person.user.username }}{% if person.profile.age %}, {{ person.profile.age }}{% endif %}
+                            </a>
+                        </h6>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-primary me-2">{{ person.compatibility|default:"0" }}% Match</span>
+                        </div>
+                    </div>
+                    
                 </div>
-                
-                <div class="col-6">
-                    <a href="{% url 'accounts:activity_history' %}" class="quick-action-btn">
-                        <i class="fas fa-history fa-lg"></i>
-                        <span>Activity Log</span>
+                {% empty %}
+                <div class="text-center py-4">
+                    <i class="fas fa-heart-broken fa-3x mb-3" style="color: var(--text-muted);"></i>
+                    <p class="text-muted mb-0">No suggestions yet</p>
+                    <a href="{% url 'accounts:profile_edit' %}" class="btn btn-link btn-sm">
+                        Complete your profile
                     </a>
                 </div>
+                {% endfor %}
+                
+                {% if suggested_people|length > 3 %}
+                <div class="text-center p-3">
+                    <a href="{% url 'accounts:people_nearby' %}" class="btn btn-outline-primary btn-sm">
+                        View More Suggestions
+                    </a>
+                </div>
+                {% endif %}
             </div>
         </div>
         
@@ -333,50 +413,6 @@
             </div>
         </div>
         
-        <!-- Recent Messages -->
-        <div class="dashboard-card">
-            <div class="dashboard-card-header">
-                <h2 class="dashboard-card-title">Recent Messages</h2>
-                <a href="{% url 'chat:chat' %}" class="btn btn-link btn-sm">
-                    View All
-                </a>
-            </div>
-            
-            <div class="conversation-list">
-                {% for conversation in recent_conversations|slice:":5" %}
-                <a href="{% url 'chat:chat' %}" 
-                   class="message-preview">
-                    <div class="d-flex align-items-center">
-                        <!-- Avatar -->
-                        {% if conversation.user.userprofile.profile_image %}
-                        <img src="{{ conversation.user.userprofile.profile_image.url }}" 
-                             alt="{{ conversation.user.username }}" 
-                             class="rounded-circle me-3" style="width: 40px; height: 40px; object-fit: cover;">
-                        {% else %}
-                        <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-3" 
-                             style="width: 40px; height: 40px;">
-                            <i class="fas fa-user text-white"></i>
-                        </div>
-                        {% endif %}
-                        
-                        <!-- Conversation Info -->
-                        <div class="flex-grow-1">
-                            <div class="d-flex justify-content-between">
-                                <h6 class="mb-0">{{ conversation.user.get_full_name|default:conversation.user.username }}</h6>
-                                <small class="text-muted">{{ conversation.last_message_time|timesince }}</small>
-                            </div>
-                            <p class="text-muted mb-0 text-truncate">{{ conversation.last_message|truncatechars:30 }}</p>
-                        </div>
-                    </div>
-                </a>
-                {% empty %}
-                <div class="text-center py-3">
-                    <i class="fas fa-comments fa-2x mb-2" style="color: var(--text-muted);"></i>
-                    <p class="text-muted mb-0">No recent messages</p>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
     </div>
 </div>
 
@@ -415,6 +451,58 @@
 <script>
 // Dashboard JavaScript Functions
 
+// Get CSRF token
+function getCSRFToken() {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, 'csrftoken'.length + 1) === ('csrftoken' + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring('csrftoken'.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Show toast notification
+function showToast(message, type = 'info') {
+    // Create toast container if needed
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.style.position = 'fixed';
+        toastContainer.style.top = '20px';
+        toastContainer.style.right = '20px';
+        toastContainer.style.zIndex = '9999';
+        document.body.appendChild(toastContainer);
+    }
+    
+    // Create toast
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0 mb-2`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', function() {
+        toast.remove();
+    });
+}
+
 function sendLike(userId) {
     $.ajax({
         url: `/friendship/like/${userId}/`,
@@ -437,91 +525,213 @@ function sendLike(userId) {
     });
 }
 
-function likePost(postId) {
-    $.ajax({
-        url: `/useractivity/post/${postId}/like/`,
-        type: 'POST',
+// ==================== POST FUNCTIONS ====================
+function likePost(postId, button) {
+    const icon = button.querySelector('i');
+    const countSpan = button.querySelector('.like-count');
+    const currentCount = parseInt(countSpan.textContent) || 0;
+    
+    fetch(`/api/activity/post/${postId}/like/`, {
+        method: 'POST',
         headers: {
-            'X-CSRFToken': '{{ csrf_token }}'
+            'X-CSRFToken': getCSRFToken(),
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
         },
-        success: function(response) {
-            if (response.success) {
-                const btn = $(`.like-post-btn[data-post-id="${postId}"]`);
-                const icon = btn.find('i');
-                const countSpan = btn.find('.count');
-                
-                if (response.action === 'liked') {
-                    icon.addClass('text-danger');
-                    showToast('Post liked!', 'success');
-                } else {
-                    icon.removeClass('text-danger');
-                    showToast('Post unliked', 'info');
-                }
-                
-                countSpan.text(response.likes_count);
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.action === 'liked') {
+                icon.classList.add('text-danger');
+                countSpan.textContent = currentCount + 1;
+                button.dataset.liked = 'true';
+                showToast('Post liked!', 'success');
+            } else {
+                icon.classList.remove('text-danger');
+                countSpan.textContent = Math.max(0, currentCount - 1);
+                button.dataset.liked = 'false';
+                showToast('Post unliked', 'info');
             }
         }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error processing request', 'error');
     });
 }
 
-function focusComment(postId) {
-    $(`#comment-section-${postId}`).toggle();
-    $(`#comment-input-${postId}`).focus();
-}
-
-function submitComment(event, postId) {
-    event.preventDefault();
-    const input = $(`#comment-input-${postId}`);
-    const content = input.val().trim();
+function sharePost(postId, username) {
+    const postUrl = `${window.location.origin}/post/${postId}/`;
     
-    if (content) {
-        $.ajax({
-            url: `/useractivity/post/${postId}/comment/`,
-            type: 'POST',
-            data: {
-                content: content,
-                csrfmiddlewaretoken: '{{ csrf_token }}'
-            },
-            success: function(response) {
-                if (response.success) {
-                    input.val('');
-                    showToast('Comment posted!', 'success');
-                    // You can add the new comment to the UI here
-                }
-            }
+    if (navigator.share) {
+        navigator.share({
+            title: `${username}'s Post`,
+            text: 'Check out this post',
+            url: postUrl,
+        });
+    } else {
+        navigator.clipboard.writeText(postUrl).then(() => {
+            showToast('Post link copied!', 'success');
         });
     }
 }
 
-function sharePost(postId) {
-    // Implement share functionality
-    showToast('Share feature coming soon!', 'info');
-}
-
-function showToast(message, type = 'info') {
-    const toast = $(`
-        <div class="toast align-items-center text-white bg-${type} border-0 position-fixed bottom-0 end-0 m-3" 
-             role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    ${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>
-    `);
+// ========== COMMENT FUNCTIONS ==========
+function likeComment(commentId, button) {
+    const countSpan = button.querySelector('.like-count');
+    const currentCount = parseInt(countSpan.textContent) || 0;
     
-    $('body').append(toast);
-    const bsToast = new bootstrap.Toast(toast[0]);
-    bsToast.show();
-    
-    // Remove after hide
-    toast.on('hidden.bs.toast', function() {
-        $(this).remove();
+    fetch(`/api/activity/comment/${commentId}/like/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCSRFToken(),
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.action === 'liked') {
+                countSpan.textContent = currentCount + 1;
+                showToast('Comment liked!', 'success');
+            } else {
+                countSpan.textContent = Math.max(0, currentCount - 1);
+                showToast('Comment unliked', 'info');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error processing request', 'error');
     });
 }
 
-// Auto-refresh dashboard data
+function deleteComment(commentId, button) {
+    if (!confirm('Are you sure you want to delete this comment?')) return;
+    
+    fetch(`/api/activity/comment/${commentId}/delete/`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCSRFToken(),
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const commentElement = document.getElementById(`comment-${commentId}`);
+            if (commentElement) {
+                commentElement.remove();
+            }
+            showToast('Comment deleted!', 'success');
+        } else {
+            showToast('Error deleting comment', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Network error', 'error');
+    });
+}
+
+function toggleReplyForm(commentId) {
+    const form = document.getElementById(`reply-form-${commentId}`);
+    if (form) {
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+function submitReply(form) {
+    const formData = new FormData(form);
+    const commentId = form.dataset.commentId;
+    const postId = form.dataset.postId;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    
+    fetch(`/api/activity/post/${postId}/comment/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCSRFToken(),
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            form.reset();
+            toggleReplyForm(commentId);
+            showToast('Reply added! Refreshing...', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('Error adding reply', 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Network error', 'error');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+}
+
+function submitComment(event, postId) {
+    event.preventDefault();
+    
+    const input = document.getElementById(`comment-input-${postId}`);
+    const comment = input.value.trim();
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    if (!comment) return;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    
+    const formData = new FormData();
+    formData.append('content', comment);
+    formData.append('csrfmiddlewaretoken', getCSRFToken());
+    
+    fetch(`/api/activity/post/${postId}/comment/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCSRFToken(),
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            input.value = '';
+            showToast('Comment added! Refreshing...', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('Error adding comment', 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Network error', 'error');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+}
+
+
+// Auto-refresh dashboard data (keep as is)
 function refreshDashboardData() {
     $.ajax({
         url: '{% url "dashboard:dashboard" %}',
@@ -531,13 +741,10 @@ function refreshDashboardData() {
             'section': 'stats'
         },
         success: function(response) {
-            // Update stats dynamically if needed
             console.log('Dashboard refreshed');
         }
     });
 }
-
-// Refresh every 60 seconds
 setInterval(refreshDashboardData, 60000);
 
 // Initialize tooltips
@@ -592,14 +799,105 @@ function loadPeopleNearby() {
         }
     });
 }
-document.addEventListener("DOMContentLoaded", function () {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tab = urlParams.get("tab");
 
+// ==================== INITIALIZATION ====================
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    $('[data-bs-toggle="tooltip"]').tooltip();
+    
+    // Set up event listeners for like buttons (delegation to handle dynamic content)
+    document.addEventListener('click', function(e) {
+        // Like comment buttons
+        if (e.target.closest('.like-comment-btn')) {
+            const btn = e.target.closest('.like-comment-btn');
+            const commentId = btn.dataset.commentId;
+            likeComment(commentId, btn);
+            e.preventDefault();
+        }
+        
+        // Delete comment buttons
+        if (e.target.closest('.delete-comment-btn')) {
+            const btn = e.target.closest('.delete-comment-btn');
+            const commentId = btn.dataset.commentId;
+            const commentElement = document.getElementById(`comment-${commentId}`);
+            deleteComment(commentId, commentElement);
+            e.preventDefault();
+        }
+        
+        // Reply toggle buttons
+        if (e.target.closest('.reply-toggle-btn')) {
+            const btn = e.target.closest('.reply-toggle-btn');
+            const commentId = btn.dataset.commentId;
+            toggleReplyForm(commentId);
+            e.preventDefault();
+        }
+        
+        // Cancel reply buttons
+        if (e.target.closest('.cancel-reply-btn')) {
+            const btn = e.target.closest('.cancel-reply-btn');
+            const commentId = btn.dataset.commentId;
+            toggleReplyForm(commentId);
+            e.preventDefault();
+        }
+    });
+    
+    // Handle reply form submissions
+    document.addEventListener('submit', function(e) {
+        if (e.target.classList.contains('reply-form')) {
+            e.preventDefault();
+            submitReply(e.target);
+        }
+    });
+    
+    // Check for tab parameter
+    const tab = new URLSearchParams(window.location.search).get("tab");
     if (tab === "discover") {
         loadPeopleNearby();
     }
 });
-// Other functions remain the same...
+
+
+
+
+// Load Comments for a post
+function loadComments(postId) {
+    fetch(`/api/activity/post/${postId}/comments/`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.comments) {
+            const commentsContainer = document.getElementById(`existing-comments-${postId}`);
+            if (commentsContainer) {
+                commentsContainer.innerHTML = '';
+                
+                data.comments.slice(0, 5).forEach(comment => {
+                    // You'll need to either:
+                    // 1. Use a template literal to create HTML (simpler)
+                    // 2. Or make an AJAX request to get rendered HTML
+                    
+                    // For simplicity, let's use a template literal:
+                    const commentHtml = createCommentHTML(comment);
+                    commentsContainer.innerHTML += commentHtml;
+                });
+                
+                if (data.comments.length > 5) {
+                    commentsContainer.innerHTML += `
+                        <div class="text-center mt-2">
+                            <a href="/timeline/?post=${postId}#comments" class="btn btn-link btn-sm">
+                                View all ${data.comments.length} comments
+                            </a>
+                        </div>
+                    `;
+                }
+            }
+        }
+    });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 </script>
 {% endblock %}
