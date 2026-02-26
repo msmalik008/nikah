@@ -304,117 +304,70 @@ class ProfileLike(models.Model):
     @classmethod
     def create_like(cls, liker, liked_user):
         """
-        Create a profile like and check for mutual match
-        Simplified version without recursion issues
+        Create like and safely handle mutual match
         """
-        try:
-            logger.info(f"Creating like from user {liker.id} to user {liked_user.id}")
-            
-            # Basic validation
-            if not liker or not liked_user:
-                logger.error("Invalid users provided")
-                return None, False
-            
-            if liker == liked_user:
-                logger.error("User cannot like themselves")
-                return None, False
-            
+
+        if liker == liked_user:
+            return None, False
+
+        with transaction.atomic():
+
+            # Check if reverse like already exists FIRST
+            reverse_like = cls.objects.select_for_update().filter(
+                liker=liked_user,
+                liked=liker
+            ).first()
+
             # Check if like already exists
             existing_like = cls.objects.filter(
                 liker=liker,
                 liked=liked_user
             ).first()
-            
+
             if existing_like:
-                logger.info(f"Like already exists: {existing_like.id}")
                 return existing_like, False
-            
-            # Create the like
-            try:
-                with transaction.atomic():
-                    like = cls.objects.create(
-                        liker=liker,
-                        liked=liked_user,
-                        is_mutual=False
-                    )
-                    logger.info(f"Like created with ID: {like.id}")
-                    
-                    # Check for mutual like
-                    reverse_like = cls.objects.filter(
-                        liker=liked_user,
-                        liked=liker
-                    ).first()
-                    
-                    if reverse_like:
-                        logger.info("Mutual like detected!")
-                        # Update both likes to mutual
-                        like.is_mutual = True
-                        like.save(update_fields=['is_mutual', 'updated_at'])
-                        
-                        reverse_like.is_mutual = True
-                        reverse_like.save(update_fields=['is_mutual', 'updated_at'])
-                        
-                        # Clear caches
-                        cache.delete_many([
-                            f"mutual_matches_{liker.id}",
-                            f"mutual_matches_{liked_user.id}",
-                            f"likes_received_{liker.id}",
-                            f"likes_received_{liked_user.id}",
-                            f"likes_sent_{liker.id}",
-                            f"likes_sent_{liked_user.id}",
-                        ])
-                    
-                    return like, True
-                    
-            except IntegrityError as e:
-                logger.error(f"Integrity error creating like: {e}")
-                # Try to get the existing like (race condition)
-                like = cls.objects.get(liker=liker, liked=liked_user)
-                return like, False
-                
-        except Exception as e:
-            logger.error(f"Unexpected error in create_like: {e}", exc_info=True)
-            raise
+
+            # Create new like
+            new_like = cls.objects.create(
+                liker=liker,
+                liked=liked_user,
+                is_mutual=False
+            )
+
+            # If reverse exists → make mutual
+            if reverse_like:
+                new_like.is_mutual = True
+                reverse_like.is_mutual = True
+
+                new_like.save(update_fields=['is_mutual'])
+                reverse_like.save(update_fields=['is_mutual'])
+
+            return new_like, True
     
     @classmethod
     def remove_like(cls, liker, liked_user):
-        """Remove a like and update mutual status"""
-        try:
-            like = cls.objects.get(liker=liker, liked=liked_user)
-            
-            with transaction.atomic():
-                # Check if there's a reverse like
-                reverse_like = cls.objects.filter(
-                    liker=liked_user,
-                    liked=liker
-                ).first()
-                
-                # If reverse like exists, remove its mutual status
-                if reverse_like and reverse_like.is_mutual:
-                    reverse_like.is_mutual = False
-                    reverse_like.save(update_fields=['is_mutual', 'updated_at'])
-                
-                # Delete the like
-                like.delete()
-                
-                # Clear caches
-                cache.delete_many([
-                    f"mutual_matches_{liker.id}",
-                    f"mutual_matches_{liked_user.id}",
-                    f"likes_received_{liker.id}",
-                    f"likes_received_{liked_user.id}",
-                    f"likes_sent_{liker.id}",
-                    f"likes_sent_{liked_user.id}",
-                ])
-                
-                return True
-                
-        except cls.DoesNotExist:
-            logger.warning(f"Like not found: {liker.id} -> {liked_user.id}")
-            return False
-        except Exception as e:
-            logger.error(f"Error removing like: {e}", exc_info=True)
-            return False
+        with transaction.atomic():
+
+            like = cls.objects.filter(
+                liker=liker,
+                liked=liked_user
+            ).first()
+
+            if not like:
+                return False
+
+            reverse_like = cls.objects.select_for_update().filter(
+                liker=liked_user,
+                liked=liker
+            ).first()
+
+            # If mutual → break mutual
+            if reverse_like and reverse_like.is_mutual:
+                reverse_like.is_mutual = False
+                reverse_like.save(update_fields=['is_mutual'])
+
+            like.delete()
+            return True
 
     @classmethod
     def get_mutual_matches(cls, user):

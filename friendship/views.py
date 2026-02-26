@@ -800,7 +800,10 @@ class ReceivedLikesView(LoginRequiredMixin, ListView):
 
 
 class LikeProfileView(LoginRequiredMixin, View):
+    """Like a user's profile"""
+    
     def post(self, request, user_id):
+        logger.info(f"LikeProfileView: user={request.user.id}, target_user={user_id}")
         to_user = get_object_or_404(User, id=user_id)
         
         if request.user == to_user:
@@ -839,16 +842,17 @@ class LikeProfileView(LoginRequiredMixin, View):
                     'message': 'Unable to like user'
                 })
         except Exception as e:
+            logger.error(f"Error in LikeProfileView: {e}", exc_info=True)
             return JsonResponse({
                 'success': False,
-                'message': str(e)
+                'message': f'Error: {str(e)}'
             })
-
 
 class UnlikeProfileView(LoginRequiredMixin, View):
     """Remove a like"""
     
     def post(self, request, user_id):
+        logger.info(f"UnlikeProfileView: user={request.user.id}, target_user={user_id}")
         to_user = get_object_or_404(User, id=user_id)
         
         if request.user == to_user:

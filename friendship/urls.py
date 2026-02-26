@@ -30,7 +30,9 @@ urlpatterns = [
     path('api/likes/sent/', views.SentLikesView.as_view(), name='sent_likes'),
     path('api/likes/received/', views.ReceivedLikesView.as_view(), name='received_likes'),
     path('like/<int:user_id>/', views.LikeProfileView.as_view(), name='like_profile'),
+
     path('unlike/<int:user_id>/', views.UnlikeProfileView.as_view(), name='unlike_profile'),
+
     path('check-mutual/<int:user_id>/', views.CheckMutualLikeView.as_view(), name='check_mutual'),
 
 

@@ -16,7 +16,9 @@ from useractivity.models import Post, Comment, PostLike, Activity, Bookmark
 from friendship.models import Friendship, FriendshipStatus, ProfileLike
 from chat.models import ChatConversation
 from useractivity.forms import PostForm, CommentForm
+import logging
 
+logger = logging.getLogger(__name__)
 
 class DashboardView(LoginRequiredMixin, TemplateView):
     """Clean dashboard that aggregates data from other apps"""
@@ -108,7 +110,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             friends = Friendship.get_friends(user)
             friend_ids = [f.id for f in friends]
             
-            # Get 5 most recent posts
+            # Build queryset with ALL operations BEFORE slicing
             posts = (
                 Post.objects.filter(
                     Q(user=user) | Q(user_id__in=friend_ids),
@@ -118,15 +120,18 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 .prefetch_related(
                     Prefetch(
                         'comments',
-                        queryset=Comment.objects.select_related('user__userprofile').order_by('-created_at')[:3]
+                        queryset=Comment.objects.select_related('user__userprofile').order_by('-created_at')
                     )
                 )
                 .annotate(
                     post_likes_count=Count('likes', distinct=True),
                     post_comments_count=Count('comments', distinct=True)
                 )
-                .order_by('-created_at')[:5]  # Limit to 5 posts
+                .order_by('-created_at')
             )
+            
+            # NOW slice after all queryset operations
+            posts = posts[:5]
             
             # Convert to list
             posts_list = list(posts)
@@ -143,9 +148,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 
                 for post in posts_list:
                     post.user_liked = post.id in user_likes
-                    # Add these for template compatibility
-                    post.post_likes_count = getattr(post, 'post_likes_count', 0)
-                    post.post_comments_count = getattr(post, 'post_comments_count', 0)
             
             return posts_list
             

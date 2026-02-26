@@ -112,7 +112,11 @@
 
 {% block extra_js %}
 <script>
+const likeUrlTemplate = "{% url 'friendship:like_profile' 0 %}";
+const unlikeUrlTemplate = "{% url 'friendship:unlike_profile' 0 %}";
+
 document.addEventListener('DOMContentLoaded', function() {
+    
     // Load initial tab (mutual)
     loadTab('mutual');
     
@@ -148,24 +152,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>`;
         
-        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(r => {
-                if (!r.ok) throw new Error(r.statusText);
-                return r.text();
-            })
-            .then(html => {
-                document.getElementById('likes-tab-content').innerHTML = html;
-                initializeButtons();
-            })
-            .catch(err => {
-                console.error('Error loading tab:', err);
-                document.getElementById('likes-tab-content').innerHTML = `
-                    <div class="text-center py-5">
-                        <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
-                        <h4>Error Loading Content</h4>
-                        <p class="text-muted">${err.message}</p>
-                    </div>`;
-            });
+        fetch(url, { 
+            headers: { 'X-Requested-With': 'XMLHttpRequest' } 
+        })
+        .then(r => {
+            if (!r.ok) throw new Error(r.statusText);
+            return r.text();
+        })
+        .then(html => {
+            document.getElementById('likes-tab-content').innerHTML = html;
+            initializeButtons();
+        })
+        .catch(err => {
+            console.error('Error loading tab:', err);
+            document.getElementById('likes-tab-content').innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                    <h4>Error Loading Content</h4>
+                    <p class="text-muted">${err.message}</p>
+                </div>`;
+        });
     }
     
     function initializeButtons() {
@@ -174,25 +180,27 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.addEventListener('click', function() {
                 const userId = this.getAttribute('data-user-id');
                 const username = this.getAttribute('data-username');
-                const currentTab = document.querySelector('.nav-tabs .nav-link.active').getAttribute('data-tab');
+                const url = unlikeUrlTemplate.replace('/0/', `/${userId}/`);
                 
                 if (confirm(`Unlike ${username}?`)) {
-                    fetch(`/friends/unlike/${userId}/`, {
+                    fetch(url, {
                         method: 'POST',
-                        headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                        headers: { 
+                            'X-CSRFToken': getCookie('csrftoken'),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
                     })
                     .then(r => r.json())
                     .then(data => {
                         if (data.success) {
-                            // Remove item from current list
-                            document.querySelector(`.like-item[data-user-id="${userId}"]`).remove();
-                            // Update counts
-                            updateLikesCounts(data.counts);
-                            
-                            // If we're in mutual likes tab and we unlike, switch to received likes
-                            if (currentTab === 'mutual') {
-                                // Switch to received likes tab
-                                document.querySelector('.nav-tabs .nav-link[data-tab="received"]').click();
+                            const item = document.querySelector(`.like-item[data-user-id="${userId}"]`);
+                            if (item) {
+                                item.style.transition = 'opacity 0.3s';
+                                item.style.opacity = '0';
+                                setTimeout(() => {
+                                    item.remove();
+                                    updateTabCounts();
+                                }, 300);
                             }
                         } else {
                             alert(data.message || 'Error unliking user');
@@ -204,56 +212,52 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Like back button handler
-        // Like back button handler
         document.querySelectorAll('.like-back-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const userId = this.getAttribute('data-user-id');
                 const username = this.getAttribute('data-username');
+                const url = likeUrlTemplate.replace('/0/', `/${userId}/`);
                 
                 if (confirm(`Like back ${username}?`)) {
-                    fetch(`/friends/like/${userId}/`, {
+                    fetch(url, {
                         method: 'POST',
-                        headers: { 'X-CSRFToken': getCookie('csrftoken') }
-                    })
-                    .then(r => {
-                        if (!r.ok) {
-                            throw new Error(`HTTP error! status: ${r.status}`);
+                        headers: { 
+                            'X-CSRFToken': getCookie('csrftoken'),
+                            'X-Requested-With': 'XMLHttpRequest'
                         }
-                        return r.json();
                     })
+                    .then(r => r.json())
                     .then(data => {
-                        console.log('Response:', data);  // Debug
                         if (data.success) {
-                            document.querySelector(`.like-item[data-user-id="${userId}"]`).remove();
-                            updateLikesCounts(data.counts);
+                            const item = document.querySelector(`.like-item[data-user-id="${userId}"]`);
+                            if (item) {
+                                item.style.transition = 'opacity 0.3s';
+                                item.style.opacity = '0';
+                                setTimeout(() => {
+                                    item.remove();
+                                    updateTabCounts();
+                                }, 300);
+                            }
+                            // Switch to mutual tab
                             document.querySelector('.nav-tabs .nav-link[data-tab="mutual"]').click();
                         } else {
                             alert(data.message || 'Error liking user');
                         }
                     })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Error liking user: ' + error.message);
-                    });
+                    .catch(() => alert('Error liking user'));
                 }
             });
         });
-        
     }
     
-    function updateLikesCounts(counts) {
-        // Update all badges
-        const totalBadge = document.getElementById('total-likes-badge');
-        const mutualBadge = document.getElementById('mutual-likes-badge');
-        const sentBadge = document.getElementById('sent-likes-badge');
-        const receivedBadge = document.getElementById('received-likes-badge');
-        
-        if (totalBadge) {
-            totalBadge.textContent = counts.mutual_likes_count + counts.sent_likes_count + counts.received_likes_count;
+    function updateTabCounts() {
+        // Reload current tab to update counts
+        const activeTab = document.querySelector('.nav-tabs .nav-link.active');
+        if (activeTab) {
+            const tab = activeTab.getAttribute('data-tab');
+            const url = activeTab.getAttribute('data-url');
+            loadTab(tab, url);
         }
-        if (mutualBadge) mutualBadge.textContent = counts.mutual_likes_count;
-        if (sentBadge) sentBadge.textContent = counts.sent_likes_count;
-        if (receivedBadge) receivedBadge.textContent = counts.received_likes_count;
     }
     
     function getCookie(name) {
