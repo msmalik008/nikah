@@ -17,3 +17,4 @@ gunicorn==23.0.0
 whitenoise==6.6.0
 django_celery_results==2.6.0
 django-celery-beat==2.8.1
+django-anymail==14.0
