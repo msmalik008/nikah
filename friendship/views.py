@@ -752,21 +752,18 @@ class LikesManagementView(LoginRequiredMixin, TemplateView):
 
 
 class MutualLikesView(LoginRequiredMixin, ListView):
-    """Display mutual likes as HTML (for AJAX tabs)"""
     template_name = 'friendship/likes/mutual_likes_list.html'
-    context_object_name = 'likes'
+    context_object_name = 'users'   # changed from 'likes'
     paginate_by = 20
-    
+
     def get_queryset(self):
-        user = self.request.user
-        return ProfileLike.get_mutual_matches(user)
-    
+        return ProfileLike.get_mutual_matches(self.request.user)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['user'] = self.request.user
         return context
-
-
+    
 class SentLikesView(LoginRequiredMixin, ListView):
     """Display sent likes as HTML (for AJAX tabs)"""
     template_name = 'friendship/likes/sent_likes_list.html'
@@ -800,7 +797,7 @@ class ReceivedLikesView(LoginRequiredMixin, ListView):
 
 
 class LikeProfileView(LoginRequiredMixin, View):
-    """Like a user's profile"""
+    """Like/Unlike a user's profile (toggle)"""
     
     def post(self, request, user_id):
         logger.info(f"LikeProfileView: user={request.user.id}, target_user={user_id}")
@@ -809,45 +806,47 @@ class LikeProfileView(LoginRequiredMixin, View):
         if request.user == to_user:
             return JsonResponse({'success': False, 'message': 'Cannot like yourself'})
         
-        try:
-            like, created = ProfileLike.create_like(request.user, to_user)
+        # Check if already liked
+        existing_like = ProfileLike.objects.filter(
+            liker=request.user,
+            liked=to_user
+        ).first()
+
+        if existing_like:
+            # UNLIKE
+            success = ProfileLike.remove_like(request.user, to_user)
+            ProfileLike.clear_like_caches(request.user, to_user)
             
-            if like:
-                # Get updated counts
-                from django.db.models import Q
-                mutual_likes_count = ProfileLike.objects.filter(
-                    (Q(liker=request.user) | Q(liked=request.user)) & Q(is_mutual=True)
-                ).count()
-                sent_likes_count = ProfileLike.objects.filter(
-                    liker=request.user, is_mutual=False
-                ).count()
-                received_likes_count = ProfileLike.objects.filter(
-                    liked=request.user, is_mutual=False
-                ).count()
-                
+            if success:
                 return JsonResponse({
                     'success': True,
+                    'action': 'unliked',  # ADD THIS
+                    'message': f'Unliked {to_user.username}'
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Error unliking user'
+                })
+        else:
+            # LIKE
+            like, created = ProfileLike.create_like(request.user, to_user)
+            ProfileLike.clear_like_caches(request.user, to_user)
+            
+            if like:
+                return JsonResponse({
+                    'success': True,
+                    'action': 'liked',  # ADD THIS
                     'message': f'Liked {to_user.username}!',
                     'is_mutual': like.is_mutual,
                     'like_id': like.id,
-                    'counts': {
-                        'mutual_likes_count': mutual_likes_count,
-                        'sent_likes_count': sent_likes_count,
-                        'received_likes_count': received_likes_count,
-                    }
                 })
             else:
                 return JsonResponse({
                     'success': False,
                     'message': 'Unable to like user'
                 })
-        except Exception as e:
-            logger.error(f"Error in LikeProfileView: {e}", exc_info=True)
-            return JsonResponse({
-                'success': False,
-                'message': f'Error: {str(e)}'
-            })
-
+        
 class UnlikeProfileView(LoginRequiredMixin, View):
     """Remove a like"""
     
@@ -861,30 +860,22 @@ class UnlikeProfileView(LoginRequiredMixin, View):
         success = ProfileLike.remove_like(request.user, to_user)
         
         if success:
+            ProfileLike.clear_like_caches(request.user, to_user)
+            
             # Get updated counts
             from django.db.models import Q
-            mutual_likes_count = ProfileLike.objects.filter(
-                (Q(liker=request.user) | Q(liked=request.user)) & Q(is_mutual=True)
-            ).count()
-            sent_likes_count = ProfileLike.objects.filter(
-                liker=request.user, is_mutual=False
-            ).count()
-            received_likes_count = ProfileLike.objects.filter(
-                liked=request.user, is_mutual=False
-            ).count()
+            counts = ProfileLike.get_counts(request.user)
             
             return JsonResponse({
                 'success': True,
+                'action': 'unliked',  # ADD THIS
                 'message': f'Unliked {to_user.username}',
-                'counts': {
-                    'mutual_likes_count': mutual_likes_count,
-                    'sent_likes_count': sent_likes_count,
-                    'received_likes_count': received_likes_count,
-                }
+                'counts': counts
             })
         else:
             return JsonResponse({
                 'success': False,
+                'action': 'not_found',
                 'message': 'Like not found'
             })
 

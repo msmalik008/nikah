@@ -21,11 +21,14 @@ urlpatterns = [
     path('post/<int:post_id>/comment/', views.CommentPostView.as_view(), name='comment_post'),
     path('post/<int:post_id>/share/', views.SharePostView.as_view(), name='share_post'),
     path('post/<int:post_id>/bookmark/', views.BookmarkPostView.as_view(), name='bookmark_post'),
+    path('post/<int:post_id>/like/', views.toggle_post_like, name='toggle_post_like'),
     
     # Comment actions
+    path('post/comment/add/', views.add_comment, name='add_comment'),
     path('comment/<int:comment_id>/like/', views.LikeCommentView.as_view(), name='like_comment'),
-    path('comment/<int:comment_id>/delete/', views.DeleteCommentView.as_view(), name='delete_comment'),
+    path('comment/<int:comment_id>/delete/', views.delete_comment, name='delete_comment'),
     
+
     # Utility endpoints
     path('post/<int:post_id>/comments/', views.get_post_comments, name='get_post_comments'),
     path('post/<int:post_id>/likes/', views.get_post_likes, name='get_post_likes'),

@@ -464,7 +464,6 @@ async function fetchAPI(url, method = 'POST', data = {}) {
     return await response.json();
 }
 
-// Like/Unlike Profile
 async function likeProfile(userId, button) {
     const btnText = button.querySelector('.btn-text');
     const originalText = btnText ? btnText.innerHTML : button.innerHTML;
@@ -481,7 +480,11 @@ async function likeProfile(userId, button) {
         const data = await fetchAPI(`/api/friends/like/${userId}/`);
         
         if (data.success) {
-            if (data.action === 'liked') {
+            // Determine action from response
+            const action = data.action || (button.dataset.liked === 'true' ? 'unliked' : 'liked');
+            
+            if (action === 'liked') {
+                // Button should show "Liked" state
                 button.classList.remove('btn-primary');
                 button.classList.add('btn-danger');
                 if (btnText) {
@@ -495,7 +498,8 @@ async function likeProfile(userId, button) {
                 if (data.is_mutual) {
                     showToast('It\'s a match! You both liked each other.', 'success');
                 }
-            } else {
+            } else if (action === 'unliked') {
+                // Button should show "Like Profile" state
                 button.classList.remove('btn-danger');
                 button.classList.add('btn-primary');
                 if (btnText) {
@@ -507,15 +511,28 @@ async function likeProfile(userId, button) {
                 showToast('Profile unliked', 'info');
             }
         } else {
-            showToast(data.error || 'Error processing request', 'error');
+            showToast(data.message || data.error || 'Error processing request', 'error');
+            // Revert button text
+            if (btnText) {
+                btnText.innerHTML = originalText;
+            } else {
+                button.innerHTML = originalText;
+            }
         }
     } catch (error) {
         console.error('Error:', error);
         showToast(error.message || 'Network error. Please try again.', 'error');
+        // Revert button text
+        if (btnText) {
+            btnText.innerHTML = originalText;
+        } else {
+            button.innerHTML = originalText;
+        }
     } finally {
         button.disabled = false;
     }
 }
+
 
 // Send Friend Request
 async function sendFriendRequest(userId, button) {

@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.core.cache import cache
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 from datetime import timedelta
 from .models import Post, Comment, PostLike, CommentLike, Share, Bookmark, Activity
 from .forms import PostForm, CommentForm, ShareForm
@@ -199,6 +199,33 @@ class LikePostView(LoginRequiredMixin, View):
         })
 
 
+@login_required
+@require_POST
+def toggle_post_like(request, post_id):
+    """Toggle like on a post"""
+    post = get_object_or_404(Post, id=post_id)
+    
+    # Check if user already liked this post
+    existing_like = PostLike.objects.filter(user=request.user, post=post).first()
+    
+    if existing_like:
+        # Unlike - remove the like
+        existing_like.delete()
+        liked = False
+    else:
+        # Like - create new like
+        PostLike.objects.create(user=request.user, post=post)
+        liked = True
+    
+    # Get updated like count from database
+    like_count = post.likes.count()
+    
+    return JsonResponse({
+        'success': True,
+        'liked': liked,
+        'like_count': like_count
+    })
+
 class CommentPostView(LoginRequiredMixin, View):
     """Add comment to a post"""
     
@@ -236,6 +263,41 @@ class CommentPostView(LoginRequiredMixin, View):
         })
 
 
+# posts/views.py
+@login_required
+@require_POST
+def add_comment(request):
+    """Add a comment to a post"""
+    post_id = request.POST.get('post_id')
+    content = request.POST.get('content', '').strip()
+    
+    if not content:
+        return JsonResponse({'success': False, 'error': 'Comment cannot be empty'})
+    
+    post = get_object_or_404(Post, id=post_id)
+    
+    # Create comment
+    comment = Comment.objects.create(
+        user=request.user,
+        post=post,
+        content=content
+    )
+    
+    # Return comment data
+    return JsonResponse({
+        'success': True,
+        'comment': {
+            'id': comment.id,
+            'user': {
+                'username': comment.user.username,
+                'profile_pic': comment.user.userprofile.profile_pic.url if hasattr(comment.user, 'userprofile') and comment.user.userprofile.profile_pic else None
+            },
+            'content': comment.content,
+            'created_at': comment.created_at.isoformat(),
+            'is_owner': comment.user == request.user
+        }
+    })
+
 class LikeCommentView(LoginRequiredMixin, View):
     """Like or unlike a comment"""
     
@@ -271,38 +333,23 @@ class LikeCommentView(LoginRequiredMixin, View):
             'likes_count': comment.likes_count
         })
 
-
-class DeleteCommentView(LoginRequiredMixin, View):
+@login_required
+@require_POST
+def delete_comment(request, comment_id):
     """Delete a comment"""
+    comment = get_object_or_404(Comment, id=comment_id)
     
-    def delete(self, request, comment_id):
-        try:
-            comment = Comment.objects.get(id=comment_id)
-            
-            # Check ownership
-            if comment.user != request.user:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Permission denied'
-                })
-            
-            # Get post ID before deletion (for cache clearing)
-            post_id = comment.post_id
-            comment.delete()
-            
-            # Update post comment count
-            post = Post.objects.get(id=post_id)
-            post.update_counts()
-            
-            return JsonResponse({
-                'success': True,
-                'comment_id': comment_id,
-            })
-        except Comment.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'error': 'Comment not found',
-            })
+    # Check if user owns the comment
+    if comment.user != request.user:
+        return JsonResponse({'success': False, 'error': 'You can only delete your own comments'})
+    
+    comment.delete()
+    
+    return JsonResponse({
+        'success': True,
+        'message': 'Comment deleted'
+    })
+
 
 
 class SharePostView(LoginRequiredMixin, View):

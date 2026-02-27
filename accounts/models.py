@@ -57,6 +57,7 @@ class UserProfile(models.Model):
     # Profile visibility and status
     is_visible = models.BooleanField(default=True, db_index=True)
     approved = models.BooleanField(default=False, db_index=True)
+    featured = models.BooleanField(default=False, db_index=True)
     completed = models.BooleanField(default=False, db_index=True)
     
     # Timestamps

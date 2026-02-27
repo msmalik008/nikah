@@ -1,135 +1,88 @@
 {% load static %}
 {% load humanize %}
 
-{% if likes %}
-    <div class="list-group">
-        {% for like in likes %}
-            {% if like.liker == user %}
-                {% with other_user=like.liked %}
-                    <div class="list-group-item list-group-item-action like-item" data-user-id="{{ other_user.id }}">
-                        <div class="d-flex w-100 justify-content-between align-items-center">
-                            <div class="d-flex align-items-center">
-                                {% with user_profile=other_user.userprofile %}
-                                    {% if user_profile.profile_pic %}
-                                        <img src="{{ user_profile.profile_pic.url }}" 
-                                             alt="{{ other_user.username }}" 
-                                             class="rounded-circle me-3 profile-pic-small">
-                                    {% else %}
-                                        <img src="{% static 'default_profile.jpg' %}" 
-                                             alt="Default" 
-                                             class="rounded-circle me-3 profile-pic-small">
-                                    {% endif %}
-                                {% endwith %}
-                                <div>
-                                    <h6 class="mb-1">
-                                        <a href="{% url 'accounts:view_profile' other_user.id %}" 
-                                           class="text-decoration-none fw-bold">
-                                            {{ other_user.username }}
-                                        </a>
-                                        <i class="fas fa-heart text-danger ms-1" title="Mutual like!"></i>
-                                    </h6>
-                                    <small class="text-muted">
-                                        You both like each other
-                                    </small>
-                                    {% with user_profile=other_user.userprofile %}
-                                        {% if user_profile.city and user_profile.country and user_profile.show_location %}
-                                            <br><small class="text-muted">
-                                                <i class="fas fa-map-marker-alt"></i> 
-                                                {{ user_profile.city }}, {{ user_profile.country }}
-                                            </small>
-                                        {% endif %}
-                                    {% endwith %}
-                                </div>
-                            </div>
-                            <div class="btn-group">
-                                <a href="{% url 'accounts:view_profile' other_user.id %}" 
-                                   class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-eye"></i> View
-                                </a>
-                                <a href="" 
-                                   class="btn btn-sm btn-outline-success">
-                                    <i class="fas fa-comment"></i> Message
-                                </a>
-                                <button type="button" 
-                                        class="btn btn-sm btn-outline-danger unlike-btn"
-                                        data-user-id="{{ other_user.id }}"
-                                        data-username="{{ other_user.username|escapejs }}">
-                                    <i class="fas fa-times"></i> Unlike
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+{% if users %}
+
+<div class="list-group">
+    {% for other_user in users %}
+    <div class="list-group-item list-group-item-action like-item"
+         data-user-id="{{ other_user.id }}">
+
+        <div class="d-flex w-100 justify-content-between align-items-center">
+
+            <div class="d-flex align-items-center">
+
+                {% with profile=other_user.userprofile %}
+                    {% if profile.profile_pic %}
+                        <img src="{{ profile.profile_pic.url }}"
+                             alt="{{ other_user.username }}"
+                             class="rounded-circle me-3 profile-pic-small">
+                    {% else %}
+                        <img src="{% static 'default_profile.jpg' %}"
+                             alt="Default"
+                             class="rounded-circle me-3 profile-pic-small">
+                    {% endif %}
                 {% endwith %}
-            {% else %}
-                {% with other_user=like.liker %}
-                    <div class="list-group-item list-group-item-action like-item" data-user-id="{{ other_user.id }}">
-                        <div class="d-flex w-100 justify-content-between align-items-center">
-                            <div class="d-flex align-items-center">
-                                {% with user_profile=other_user.userprofile %}
-                                    {% if user_profile.profile_pic %}
-                                        <img src="{{ user_profile.profile_pic.url }}" 
-                                             alt="{{ other_user.username }}" 
-                                             class="rounded-circle me-3 profile-pic-small">
-                                    {% else %}
-                                        <img src="{% static 'default_profile.jpg' %}" 
-                                             alt="Default" 
-                                             class="rounded-circle me-3 profile-pic-small">
-                                    {% endif %}
-                                {% endwith %}
-                                <div>
-                                    <h6 class="mb-1">
-                                        <a href="{% url 'accounts:view_profile' other_user.id %}" 
-                                           class="text-decoration-none fw-bold">
-                                            {{ other_user.username }}
-                                        </a>
-                                        <i class="fas fa-heart text-danger ms-1" title="Mutual like!"></i>
-                                    </h6>
-                                    <small class="text-muted">
-                                        You both like each other
-                                    </small>
-                                    {% with user_profile=other_user.userprofile %}
-                                        {% if user_profile.city and user_profile.country and user_profile.show_location %}
-                                            <br><small class="text-muted">
-                                                <i class="fas fa-map-marker-alt"></i> 
-                                                {{ user_profile.city }}, {{ user_profile.country }}
-                                            </small>
-                                        {% endif %}
-                                    {% endwith %}
-                                </div>
-                            </div>
-                            <div class="btn-group">
-                                <a href="{% url 'accounts:view_profile' other_user.id %}" 
-                                   class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-eye"></i> View
-                                </a>
-                                <a href="" 
-                                   class="btn btn-sm btn-outline-success">
-                                    <i class="fas fa-comment"></i> Message
-                                </a>
-                                <button type="button" 
-                                        class="btn btn-sm btn-outline-danger unlike-btn"
-                                        data-user-id="{{ other_user.id }}"
-                                        data-username="{{ other_user.username|escapejs }}">
-                                    <i class="fas fa-times"></i> Unlike
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                {% endwith %}
-            {% endif %}
-        {% endfor %}
+
+                <div>
+                    <h6 class="mb-1">
+                        <a href="{% url 'accounts:view_profile' other_user.id %}"
+                           class="text-decoration-none fw-bold">
+                            {{ other_user.username }}
+                        </a>
+                        <i class="fas fa-heart text-danger ms-1"></i>
+                    </h6>
+
+                    <small class="text-muted">
+                        You both like each other
+                    </small>
+
+                    {% with profile=other_user.userprofile %}
+                        {% if profile.city and profile.country and profile.show_location %}
+                            <br>
+                            <small class="text-muted">
+                                <i class="fas fa-map-marker-alt"></i>
+                                {{ profile.city }}, {{ profile.country }}
+                            </small>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <a href="{% url 'accounts:view_profile' other_user.id %}"
+                   class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-eye"></i> View
+                </a>
+
+                <button type="button"
+                        class="btn btn-sm btn-outline-danger unlike-btn"
+                        data-user-id="{{ other_user.id }}"
+                        data-username="{{ other_user.username|escapejs }}">
+                    <i class="fas fa-times"></i> Unlike
+                </button>
+            </div>
+
+        </div>
     </div>
-    
-    {% if is_paginated %}
-        {% include 'includes/pagination.html' with page_obj=page_obj %}
-    {% endif %}
+    {% endfor %}
+</div>
+
+{% if is_paginated %}
+    {% include 'includes/pagination.html' with page_obj=page_obj %}
+{% endif %}
+
 {% else %}
-    <div class="text-center py-5">
-        <i class="fas fa-heart fa-3x text-muted mb-3"></i>
-        <h4>No Mutual Likes Yet</h4>
-        <p class="text-muted">When someone likes you back, they'll appear here.</p>
-        <a href="{% url 'accounts:find_friends' %}" class="btn btn-primary">
-            <i class="fas fa-user-plus"></i> Find People
-        </a>
-    </div>
+
+<div class="text-center py-5">
+    <i class="fas fa-heart fa-3x text-muted mb-3"></i>
+    <h4>No Mutual Likes Yet</h4>
+    <p class="text-muted">
+        When someone likes you back, they'll appear here.
+    </p>
+    <a href="{% url 'accounts:find_friends' %}" class="btn btn-primary">
+        <i class="fas fa-user-plus"></i> Find People
+    </a>
+</div>
+
 {% endif %}

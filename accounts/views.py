@@ -1,10 +1,6 @@
-# Standard library imports
 import json
 import math
-import logging
 from datetime import timedelta
-
-# Django core imports
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
@@ -12,14 +8,10 @@ from django.contrib.auth.views import PasswordResetView, PasswordResetConfirmVie
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.contrib.auth.models import User
-
 from django.urls import reverse_lazy, reverse
-from django.utils import timezone
 from django.views.generic import CreateView, UpdateView, TemplateView, FormView
-from django.views import View
 from django.http import JsonResponse, HttpResponseForbidden
 from django.core.exceptions import PermissionDenied
-
 from django.db import transaction
 from django.db.models import Q, Count, Prefetch, F, Case, When, Value, IntegerField
 from django.db.models.functions import Coalesce
@@ -27,11 +19,19 @@ from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.template.loader import render_to_string
 from django.core.cache import cache
 from django.conf import settings
-
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache, cache_page
 from django.views.decorators.vary import vary_on_cookie
 from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import ListView
+from datetime import date
+from friendship.models import ProfileLike
+from django.views import View
+from django.utils import timezone
+import logging
+from .models import UserProfile
+
+logger = logging.getLogger(__name__)
 
 # Local app imports
 from .forms import (
@@ -955,23 +955,7 @@ class SuccessStoriesView(TemplateView):
         ]
         return context
 
-# accounts/views.py
 
-from django.views import View
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.template.loader import render_to_string
-from django.utils import timezone
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import never_cache
-from django.db.models import Q
-from django.core.cache import cache
-import logging
-
-from .models import UserProfile
-
-logger = logging.getLogger(__name__)
 
 
 # ==========================================================
@@ -1623,3 +1607,76 @@ def get_username_suggestions(username):
     ).values_list('username', flat=True))
     
     return [s for s in suggestions if s.lower() not in taken][:5]
+
+class ProfileSearchView(LoginRequiredMixin, ListView):
+    """Search for profiles with filters"""
+    model = UserProfile
+    template_name = 'accounts/search_results.html'
+    context_object_name = 'profiles'
+    paginate_by = 12
+    
+    def get_queryset(self):
+        # Base queryset - exclude current user and inactive users
+        queryset = UserProfile.objects.exclude(user=self.request.user).filter(user__is_active=True)
+        
+        # Get filter parameters
+        age_min = self.request.GET.get('age_min')
+        age_max = self.request.GET.get('age_max')
+        sect = self.request.GET.get('sect')
+        country = self.request.GET.get('country')
+        
+        # Apply age filter (using age field)
+        if age_min:
+            try:
+                age_min = int(age_min)
+                # Calculate max birth date for minimum age
+                today = date.today()
+                min_age = date(today.year - age_min - 1, today.month, today.day)
+                queryset = queryset.filter(age__lte=min_age)
+            except (ValueError, TypeError):
+                pass
+        
+        if age_max:
+            try:
+                age_max = int(age_max)
+                # Calculate min birth date for maximum age
+                today = date.today()
+                max_age = date(today.year - age_max + 1, today.month, today.day)
+                queryset = queryset.filter(age__gte=max_age)
+            except (ValueError, TypeError):
+                pass
+        
+        # Apply sect filter
+        if sect:
+            queryset = queryset.filter(sect=sect)
+        
+        # Apply country filter (case-insensitive partial match)
+        if country:
+            queryset = queryset.filter(country__icontains=country)
+        
+        # Order by: same city first, then by last activity
+        # Annotate with a flag for same city
+        user_city = getattr(self.request.user.userprofile, 'city', None)
+        if user_city:
+            from django.db.models import BooleanField, Case, When, Value
+            queryset = queryset.annotate(
+                is_same_city=Case(
+                    When(city=user_city, then=Value(True)),
+                    default=Value(False),
+                    output_field=BooleanField()
+                )
+            ).order_by('-is_same_city', '-user__last_login', '-user__date_joined')
+        else:
+            # If user has no city, just order by last login
+            queryset = queryset.order_by('-user__last_login', '-user__date_joined')
+        
+        return queryset.select_related('user', 'user__userprofile')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['sect_choices'] = UserProfile.SECT_CHOICES
+        context['liked_profiles'] = set(
+            ProfileLike.objects.filter(liker=self.request.user).values_list('liked_id', flat=True)
+        )
+        context['search_params'] = self.request.GET
+        return context

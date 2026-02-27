@@ -1,0 +1,391 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Search Results - Nikah{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    {# Page Header #}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Search Results</h1>
+            <p class="text-muted mb-0">
+                {% if profiles %}
+                    Found {{ profiles.paginator.count }} profiles matching your criteria
+                {% else %}
+                    No profiles found matching your criteria
+                {% endif %}
+            </p>
+        </div>
+        <a href="{% url 'dashboard:dashboard' %}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+        </a>
+    </div>
+
+    {# Search Form (same as dashboard) #}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" action="{% url 'accounts:profile_search' %}" class="row g-3">
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label fw-semibold">Age Range</label>
+                    <div class="input-group">
+                        <input type="number" 
+                               class="form-control" 
+                               name="age_min" 
+                               placeholder="Min" 
+                               min="18" 
+                               max="100"
+                               value="{{ request.GET.age_min|default:'' }}">
+                        <span class="input-group-text bg-light">to</span>
+                        <input type="number" 
+                               class="form-control" 
+                               name="age_max" 
+                               placeholder="Max" 
+                               min="18" 
+                               max="100"
+                               value="{{ request.GET.age_max|default:'' }}">
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label fw-semibold">Sect</label>
+                    <select class="form-select" name="sect">
+                        <option value="">All Sects</option>
+                        {% for value, label in sect_choices %}
+                            <option value="{{ value }}" {% if request.GET.sect == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <label class="form-label fw-semibold">Country</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="fas fa-globe"></i></span>
+                        <input type="text" 
+                               class="form-control" 
+                               name="country" 
+                               placeholder="Enter country..."
+                               value="{{ request.GET.country|default:'' }}">
+                    </div>
+                </div>
+                
+                <div class="col-lg-2 col-md-6">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i> Search
+                        </button>
+                        {% if request.GET %}
+                            <a href="{% url 'accounts:profile_search' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i> Clear
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {# Search Results #}
+    {% if profiles %}
+        <div class="row">
+            {% for profile in profiles %}
+                <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+                    <div class="card profile-card h-100 border-0 shadow-sm">
+                        <div class="position-relative">
+                            {% if profile.profile_pic %}
+                                <img src="{{ profile.profile_pic.url }}" 
+                                     class="card-img-top" 
+                                     alt="{{ profile.user.username }}"
+                                     style="height: 200px; object-fit: cover;">
+                            {% else %}
+                                <img src="{% static 'default_profile.jpg' %}" 
+                                     class="card-img-top" 
+                                     alt="Default"
+                                     style="height: 200px; object-fit: cover;">
+                            {% endif %}
+                            <div class="position-absolute top-0 end-0 p-2">
+                                <span class="badge bg-{{ profile.user.is_online|yesno:'success,secondary' }}">
+                                    {{ profile.user.is_online|yesno:'Online,Offline' }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-1">
+                                    <a href="{% url 'accounts:view_profile' profile.user.id %}" 
+                                       class="text-decoration-none text-dark fw-bold">
+                                        {{ profile.user.get_full_name|default:profile.user.username }}
+                                    </a>
+                                </h5>
+                                {% if profile.age %}
+                                    <span class="badge bg-light text-dark">{{ profile.age }} yrs</span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="text-muted small mb-3">
+                                {% if profile.city %}{{ profile.city }}{% endif %}
+                                {% if profile.city and profile.country %}, {% endif %}
+                                {% if profile.country %}{{ profile.country }}{% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                {% if profile.sect %}
+                                    <span class="badge bg-primary">{{ profile.sect|title }}</span>
+                                {% endif %}
+                                {% if profile.country %}
+                                    <span class="badge bg-outline-secondary ms-1">{{ profile.country }}</span>
+                                {% endif %}
+                            </div>
+                            
+                            {% if profile.bio %}
+                                <p class="card-text small text-muted mb-3">
+                                    {{ profile.bio|truncatewords:30 }}
+                                </p>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="card-footer bg-white border-top-0 pt-0">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'accounts:view_profile' profile.user.id %}" 
+                                   class="btn btn-primary btn-sm">
+                                    <i class="fas fa-user me-1"></i> View Profile
+                                </a>
+                                <button class="btn btn-outline-primary btn-sm like-button" 
+                                        data-user-id="{{ profile.user.id }}"
+                                        data-username="{{ profile.user.username|escapejs }}"
+                                        data-url="{% url 'friendship:like_profile' profile.user.id %}"
+                                        {% if profile.user.id in liked_profiles %}data-liked="true"{% else %}data-liked="false"{% endif %}>
+                                    <i class="fas fa-heart me-1"></i> 
+                                    <span class="btn-text">
+                                        {% if profile.user.id in liked_profiles %}Liked{% else %}Like{% endif %}
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        {# Pagination #}
+        {% if is_paginated %}
+        <nav aria-label="Search results pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% querystring request.GET page=page_obj.previous_page_number %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&laquo;</span>
+                    </li>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% querystring request.GET page=num %}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% querystring request.GET page=page_obj.next_page_number %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&raquo;</span>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        
+    {% else %}
+        {# No Results #}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-search fa-4x text-muted mb-4"></i>
+                <h3 class="h4 mb-3">No profiles found</h3>
+                <p class="text-muted mb-4">
+                    Try adjusting your filters to see more results. You can clear all filters to browse all profiles.
+                </p>
+                <a href="{% url 'accounts:profile_search' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-times me-2"></i> Clear All Filters
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+{# Profile Card CSS #}
+<style>
+.profile-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.profile-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+}
+
+.profile-card .card-img-top {
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.profile-card .card-body {
+    padding: 1rem;
+}
+
+.profile-card .card-footer {
+    padding: 1rem;
+    background-color: #f8f9fa;
+}
+
+.profile-card .btn {
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+}
+
+.badge.bg-outline-secondary {
+    background-color: transparent;
+    border: 1px solid #6c757d;
+    color: #6c757d;
+}
+</style>
+
+{# JavaScript for Like Buttons #}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle like button clicks
+    document.querySelectorAll('.like-button').forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            const url = this.getAttribute('data-url');
+            const csrftoken = getCookie('csrftoken');
+            const btnText = this.querySelector('.btn-text');
+            const originalText = btnText ? btnText.innerHTML : this.innerHTML;
+            
+            // Show loading state
+            this.disabled = true;
+            if (btnText) {
+                btnText.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Loading...';
+            }
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.action === 'liked') {
+                        this.classList.remove('btn-outline-primary');
+                        this.classList.add('btn-danger');
+                        if (btnText) {
+                            btnText.innerHTML = 'Liked';
+                        }
+                        this.dataset.liked = 'true';
+                        showToast('Profile liked!', 'success');
+                        
+                        if (data.is_mutual) {
+                            showToast('It\'s a match! You both liked each other.', 'success');
+                        }
+                    } else {
+                        this.classList.remove('btn-danger');
+                        this.classList.add('btn-outline-primary');
+                        if (btnText) {
+                            btnText.innerHTML = 'Like';
+                        }
+                        this.dataset.liked = 'false';
+                        showToast('Profile unliked', 'info');
+                    }
+                } else {
+                    showToast(data.message || 'Error processing request', 'error');
+                    if (btnText) {
+                        btnText.innerHTML = originalText;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Network error. Please try again.', 'error');
+                if (btnText) {
+                    btnText.innerHTML = originalText;
+                }
+            })
+            .finally(() => {
+                this.disabled = false;
+            });
+        });
+    });
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'primary'} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        
+        const toastContainer = document.getElementById('toast-container') || createToastContainer();
+        toastContainer.appendChild(toast);
+        
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+    
+    function createToastContainer() {
+        const container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        container.style.zIndex = '1050';
+        document.body.appendChild(container);
+        return container;
+    }
+});
+</script>
+{% endblock %}

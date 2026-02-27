@@ -59,6 +59,10 @@ class PostLike(models.Model):
     class Meta:
         unique_together = ['post', 'user']
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'post']),
+            models.Index(fields=['post', 'created_at']),
+        ]
     
     def __str__(self):
         return f"{self.user.username} likes post #{self.post.id}"

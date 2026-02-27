@@ -34,6 +34,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         user = self.request.user
         profile = getattr(user, "userprofile", None)
+        all_profiles = UserProfile.objects.filter(is_visible=True, approved=True).exclude(user=user)
+        featured_profiles = UserProfile.objects.filter(is_visible=True, approved=True, featured=True).exclude(user=user)
 
         if profile:
             context['total_matches'] = profile.get_matches_count(threshold=50)
@@ -48,6 +50,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context.update({
             "profile": profile,
             **dashboard_data,
+            "all_profiles": all_profiles,
+            "featured_profiles": featured_profiles,
         })
         
         # FIX: Add suggested_people to context
@@ -110,7 +114,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             friends = Friendship.get_friends(user)
             friend_ids = [f.id for f in friends]
             
-            # Build queryset with ALL operations BEFORE slicing
+            # Build queryset - IMPORTANT: Do ALL operations BEFORE slicing
             posts = (
                 Post.objects.filter(
                     Q(user=user) | Q(user_id__in=friend_ids),

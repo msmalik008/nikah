@@ -272,22 +272,25 @@ class ProfileLike(models.Model):
     Profile likes for matching system.
     When two users like each other, it becomes a mutual match.
     """
+
     liker = models.ForeignKey(
-        User, 
-        on_delete=models.CASCADE, 
+        User,
+        on_delete=models.CASCADE,
         related_name='sent_profile_likes',
         db_index=True
     )
+
     liked = models.ForeignKey(
-        User, 
-        on_delete=models.CASCADE, 
+        User,
+        on_delete=models.CASCADE,
         related_name='received_profile_likes',
         db_index=True
     )
+
     is_mutual = models.BooleanField(default=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = ['liker', 'liked']
         ordering = ['-created_at']
@@ -297,14 +300,52 @@ class ProfileLike(models.Model):
             models.Index(fields=['is_mutual']),
             models.Index(fields=['created_at']),
         ]
-    
+
     def __str__(self):
         return f"{self.liker.username} likes {self.liked.username}"
-    
+
+    # =====================================================
+    # CACHE UTILITIES
+    # =====================================================
+
+    @staticmethod
+    def clear_like_caches(user1, user2):
+        """Clear all like-related caches for both users."""
+        for user in [user1, user2]:
+            cache.delete(f"mutual_matches_{user.id}")
+            cache.delete(f"likes_received_{user.id}")
+            cache.delete(f"likes_sent_{user.id}")
+
+    # =====================================================
+    # COUNT HELPER
+    # =====================================================
+
+    @classmethod
+    def get_counts(cls, user):
+        return {
+            'mutual_likes_count': cls.objects.filter(
+                Q(liker=user) | Q(liked=user),
+                is_mutual=True
+            ).count(),
+            'sent_likes_count': cls.objects.filter(
+                liker=user,
+                is_mutual=False
+            ).count(),
+            'received_likes_count': cls.objects.filter(
+                liked=user,
+                is_mutual=False
+            ).count()
+        }
+
+    # =====================================================
+    # CREATE LIKE
+    # =====================================================
+
     @classmethod
     def create_like(cls, liker, liked_user):
         """
-        Create like and safely handle mutual match
+        Create like and safely handle mutual match.
+        Returns (like_instance, created_boolean)
         """
 
         if liker == liked_user:
@@ -312,13 +353,13 @@ class ProfileLike(models.Model):
 
         with transaction.atomic():
 
-            # Check if reverse like already exists FIRST
+            # Lock reverse like if exists
             reverse_like = cls.objects.select_for_update().filter(
                 liker=liked_user,
                 liked=liker
             ).first()
 
-            # Check if like already exists
+            # Prevent duplicate like
             existing_like = cls.objects.filter(
                 liker=liker,
                 liked=liked_user
@@ -334,7 +375,7 @@ class ProfileLike(models.Model):
                 is_mutual=False
             )
 
-            # If reverse exists → make mutual
+            # If reverse like exists → make mutual
             if reverse_like:
                 new_like.is_mutual = True
                 reverse_like.is_mutual = True
@@ -342,10 +383,22 @@ class ProfileLike(models.Model):
                 new_like.save(update_fields=['is_mutual'])
                 reverse_like.save(update_fields=['is_mutual'])
 
+            # Clear caches AFTER successful DB operations
+            cls.clear_like_caches(liker, liked_user)
+
             return new_like, True
-    
+
+    # =====================================================
+    # REMOVE LIKE
+    # =====================================================
+
     @classmethod
     def remove_like(cls, liker, liked_user):
+        """
+        Remove like and safely break mutual if needed.
+        Returns True if deleted, False otherwise.
+        """
+
         with transaction.atomic():
 
             like = cls.objects.filter(
@@ -361,61 +414,90 @@ class ProfileLike(models.Model):
                 liked=liker
             ).first()
 
-            # If mutual → break mutual
+            # Break mutual if needed
             if reverse_like and reverse_like.is_mutual:
                 reverse_like.is_mutual = False
                 reverse_like.save(update_fields=['is_mutual'])
 
             like.delete()
+
+            # Clear caches AFTER deletion
+            cls.clear_like_caches(liker, liked_user)
+
             return True
+
+    # =====================================================
+    # QUERY METHODS (SAFE CACHING)
+    # =====================================================
 
     @classmethod
     def get_mutual_matches(cls, user):
-        """Get all mutual matches for a user with caching"""
+        """
+        Return all users that have mutual likes with the current user.
+        Caches list of user IDs (NOT QuerySet).
+        """
         cache_key = f"mutual_matches_{user.id}"
-        cached = cache.get(cache_key)
-        
-        if cached is not None:
-            return cached
-        
-        matches = cls.objects.filter(
-            (Q(liker=user) | Q(liked=user)) &
-            Q(is_mutual=True)
-        ).select_related('liker__userprofile', 'liked__userprofile')
-        
-        cache.set(cache_key, matches, 300)
-        return matches  # Return QuerySet, not list
+        cached_ids = cache.get(cache_key)
+
+        if cached_ids is None:
+            mutual_ids = list(
+                cls.objects.filter(
+                    liker=user,
+                    is_mutual=True
+                ).values_list('liked_id', flat=True)
+            )
+            cache.set(cache_key, mutual_ids, 300)
+        else:
+            mutual_ids = cached_ids
+
+        return User.objects.filter(
+            id__in=mutual_ids
+        ).select_related('userprofile')
 
     @classmethod
     def get_likes_received(cls, user):
-        """Get all likes received by user (not mutual) with caching"""
+        """
+        Get all likes received by user (not mutual).
+        Caches list of like IDs.
+        """
         cache_key = f"likes_received_{user.id}"
-        cached = cache.get(cache_key)
-        
-        if cached is not None:
-            return cached
-        
-        likes = cls.objects.filter(
-            liked=user,
-            is_mutual=False
+        cached_ids = cache.get(cache_key)
+
+        if cached_ids is None:
+            like_ids = list(
+                cls.objects.filter(
+                    liked=user,
+                    is_mutual=False
+                ).values_list('id', flat=True)
+            )
+            cache.set(cache_key, like_ids, 120)
+        else:
+            like_ids = cached_ids
+
+        return cls.objects.filter(
+            id__in=like_ids
         ).select_related('liker__userprofile')
-        
-        cache.set(cache_key, likes, 120)
-        return likes  # Return QuerySet, not list
 
     @classmethod
     def get_likes_given(cls, user):
-        """Get all likes given by user (not mutual)"""
+        """
+        Get all likes given by user (not mutual).
+        Caches list of like IDs.
+        """
         cache_key = f"likes_sent_{user.id}"
-        cached = cache.get(cache_key)
-        
-        if cached is not None:
-            return cached
-        
-        likes = cls.objects.filter(
-            liker=user,
-            is_mutual=False
+        cached_ids = cache.get(cache_key)
+
+        if cached_ids is None:
+            like_ids = list(
+                cls.objects.filter(
+                    liker=user,
+                    is_mutual=False
+                ).values_list('id', flat=True)
+            )
+            cache.set(cache_key, like_ids, 120)
+        else:
+            like_ids = cached_ids
+
+        return cls.objects.filter(
+            id__in=like_ids
         ).select_related('liked__userprofile')
-        
-        cache.set(cache_key, likes, 120)
-        return likes  # Return QuerySet, not list

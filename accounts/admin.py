@@ -151,7 +151,7 @@ class CustomUserAdmin(UserAdmin):
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'age', 'gender', 'city', 'country', 'sect', 
                     'is_visible', 'approved', 'completed', 'email_verified', 
-                    'get_completion_percentage', 'created_at')
+                    'get_completion_percentage', 'created_at',)
     list_filter = ('is_visible', 'approved', 'completed', 'email_verified', 
                   'gender', 'education', 'practice_level', 'source', 'created_at')
     search_fields = ('user__username', 'user__email', 'city', 'country', 'sect', 'bio')
@@ -177,7 +177,7 @@ class UserProfileAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Status & Settings', {
-            'fields': ('is_visible', 'approved', 'completed',
+            'fields': ('is_visible', 'approved', 'completed', 'featured',
                       'show_age', 'show_location', 'show_sect',
                       'show_education', 'show_practice_level')
         }),
